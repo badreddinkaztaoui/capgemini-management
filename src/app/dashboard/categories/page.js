@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { PlusIcon, ArrowLeftIcon, XMarkIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, ArrowLeftIcon, XMarkIcon, PencilIcon, TrashIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
 
 export default function CategoriesPage() {
   const router = useRouter();
@@ -18,6 +18,7 @@ export default function CategoriesPage() {
   const [subcategories, setSubcategories] = useState([]);
   const [editingMessage, setEditingMessage] = useState(null);
   const [editingSubcategory, setEditingSubcategory] = useState(null);
+  const [expandedCategories, setExpandedCategories] = useState(new Set());
 
   useEffect(() => {
     loadCategories();
@@ -36,6 +37,18 @@ export default function CategoriesPage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const toggleCategory = (categoryId) => {
+    setExpandedCategories(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(categoryId)) {
+        newSet.delete(categoryId);
+      } else {
+        newSet.add(categoryId);
+      }
+      return newSet;
+    });
   };
 
   const handleDeleteCategory = async (categoryId) => {
@@ -194,7 +207,7 @@ export default function CategoriesPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
           <button
@@ -204,9 +217,9 @@ export default function CategoriesPage() {
             <ArrowLeftIcon className="h-4 w-4 mr-1" />
             Back to Dashboard
           </button>
-          <h1 className="text-2xl font-bold text-gray-900">Create Category</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Categories Management</h1>
           <p className="mt-2 text-sm text-gray-600">
-            Create a new category with subcategories and messages
+            Manage your categories, subcategories, and messages
           </p>
         </div>
 
@@ -223,117 +236,184 @@ export default function CategoriesPage() {
           </div>
         )}
 
+        {/* Categories List */}
+        <div className="space-y-4">
+          {categories.map((category) => (
+            <div key={category._id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+              {/* Category Header */}
+              <div
+                className="p-6 cursor-pointer hover:bg-gray-50 transition-colors duration-200"
+                onClick={() => toggleCategory(category._id)}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    {expandedCategories.has(category._id) ? (
+                      <ChevronUpIcon className="h-5 w-5 text-gray-500" />
+                    ) : (
+                      <ChevronDownIcon className="h-5 w-5 text-gray-500" />
+                    )}
+                    <h3 className="text-lg font-semibold text-gray-900">{category.name}</h3>
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                      category.status === 'Approved' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {category.status}
+                    </span>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteCategory(category._id);
+                    }}
+                    className="text-red-600 hover:text-red-800"
+                  >
+                    <TrashIcon className="h-5 w-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Subcategories */}
+              {expandedCategories.has(category._id) && (
+                <div className="border-t border-gray-100">
+                  {category.subcategories.map((subcategory) => (
+                    <div key={subcategory._id} className="p-6 bg-gray-50 border-b border-gray-100 last:border-b-0">
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-md font-medium text-gray-900">{subcategory.name}</h4>
+                        <button
+                          onClick={() => handleDeleteSubcategory(category._id, subcategory._id)}
+                          className="text-red-600 hover:text-red-800"
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                        </button>
+                      </div>
+
+                      {/* Messages */}
+                      <div className="space-y-3">
+                        {subcategory.messages.map((message) => (
+                          <div key={message._id} className="bg-white p-4 rounded-lg border border-gray-200">
+                            {editingMessage === message._id ? (
+                              <textarea
+                                value={message.content}
+                                onChange={(e) => handleEditMessage(category._id, subcategory._id, message._id, e.target.value)}
+                                className="w-full p-2 border rounded"
+                                rows="3"
+                              />
+                            ) : (
+                              <div className="flex items-start justify-between">
+                                <p className="text-gray-700 whitespace-pre-wrap">{message.content}</p>
+                                <button
+                                  onClick={() => setEditingMessage(message._id)}
+                                  className="ml-2 text-gray-600 hover:text-gray-900"
+                                >
+                                  <PencilIcon className="h-4 w-4" />
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
         {/* Create Category Form */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+        <div className="mt-8 bg-white rounded-xl shadow-sm border border-gray-100">
           <div className="p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Create New Category</h2>
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Category Name */}
-              <div className="bg-gray-50 p-6 rounded-lg">
-                <label htmlFor="categoryName" className="block text-base font-medium text-gray-700 mb-2">
+              <div>
+                <label htmlFor="categoryName" className="block text-sm font-medium text-gray-700 mb-2">
                   Category Name
                 </label>
-                <div className="mt-1">
-                  <input
-                    type="text"
-                    id="categoryName"
-                    value={formData.categoryName}
-                    onChange={(e) => setFormData({ ...formData, categoryName: e.target.value })}
-                    className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-4 py-3 transition-colors duration-200"
-                    placeholder="Enter category name"
-                    required
-                  />
-                </div>
+                <input
+                  type="text"
+                  id="categoryName"
+                  value={formData.categoryName}
+                  onChange={(e) => setFormData({ ...formData, categoryName: e.target.value })}
+                  className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-4 py-3"
+                  placeholder="Enter category name"
+                  required
+                />
               </div>
 
               {/* Subcategories List */}
               {subcategories.length > 0 && (
                 <div className="space-y-4">
-                  <h3 className="text-base font-medium text-gray-700">Added Subcategories</h3>
-                  <div className="space-y-3">
-                    {subcategories.map((sub, index) => (
-                      <div key={index} className="flex items-center justify-between bg-gray-50 p-4 rounded-lg">
-                        <div>
-                          <p className="text-base font-medium text-gray-900">{sub.name}</p>
-                          {sub.message && (
-                            <p className="text-base text-gray-500 mt-2">{sub.message}</p>
-                          )}
-                        </div>
+                  <h3 className="text-sm font-medium text-gray-700">Added Subcategories</h3>
+                  {subcategories.map((sub, index) => (
+                    <div key={index} className="bg-gray-50 p-4 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">{sub.name}</span>
                         <button
                           type="button"
-                          onClick={() => handleRemoveSubcategory(index)}
-                          className="text-gray-400 hover:text-red-500 transition-colors duration-200 p-2"
+                          onClick={() => {
+                            setSubcategories(subcategories.filter((_, i) => i !== index));
+                          }}
+                          className="text-red-600 hover:text-red-800"
                         >
-                          <XMarkIcon className="h-6 w-6" />
+                          <XMarkIcon className="h-5 w-5" />
                         </button>
                       </div>
-                    ))}
-                  </div>
+                      {sub.message && (
+                        <p className="mt-2 text-sm text-gray-600">{sub.message}</p>
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
 
               {/* Add Subcategory Form */}
-              <div className="bg-gray-50 p-6 rounded-lg space-y-6">
-                <h3 className="text-base font-medium text-gray-700">Add Subcategory</h3>
-                <div>
-                  <label htmlFor="subcategoryName" className="block text-base font-medium text-gray-700 mb-2">
-                    Subcategory Name
-                  </label>
-                  <div className="mt-1">
+              <div className="bg-gray-50 p-6 rounded-lg">
+                <h3 className="text-sm font-medium text-gray-700 mb-4">Add Subcategory</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label htmlFor="subcategoryName" className="block text-sm font-medium text-gray-700 mb-2">
+                      Subcategory Name
+                    </label>
                     <input
                       type="text"
                       id="subcategoryName"
                       value={formData.subcategoryName}
                       onChange={(e) => setFormData({ ...formData, subcategoryName: e.target.value })}
-                      className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-4 py-3 transition-colors duration-200"
+                      className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-4 py-3"
                       placeholder="Enter subcategory name"
                     />
                   </div>
-                </div>
-
-                <div>
-                  <label htmlFor="message" className="block text-base font-medium text-gray-700 mb-2">
-                    Message (Optional)
-                  </label>
-                  <div className="mt-1">
+                  <div>
+                    <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-2">
+                      Message
+                    </label>
                     <textarea
                       id="message"
                       value={formData.message}
                       onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                      rows={4}
-                      className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-4 py-3 transition-colors duration-200"
+                      className="block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-4 py-3"
                       placeholder="Enter message content"
+                      rows="3"
                     />
                   </div>
+                  <button
+                    type="button"
+                    onClick={handleAddSubcategory}
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  >
+                    <PlusIcon className="h-4 w-4 mr-2" />
+                    Add Subcategory
+                  </button>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={handleAddSubcategory}
-                  className="w-full flex justify-center items-center px-6 py-3 border border-indigo-300 text-base font-medium rounded-lg text-indigo-700 bg-white hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200"
-                >
-                  <PlusIcon className="h-6 w-6 mr-2" />
-                  Add Subcategory
-                </button>
               </div>
 
-              {/* Submit Button */}
-              <div className="pt-6">
+              <div className="flex justify-end">
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full flex justify-center items-center px-6 py-4 border border-transparent text-base font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                 >
-                  {isLoading ? (
-                    <div className="flex items-center">
-                      <div className="w-6 h-6 border-t-2 border-white rounded-full animate-spin mr-3"></div>
-                      Creating...
-                    </div>
-                  ) : (
-                    <>
-                      <PlusIcon className="h-6 w-6 mr-2" />
-                      Create Category
-                    </>
-                  )}
+                  {isLoading ? 'Creating...' : 'Create Category'}
                 </button>
               </div>
             </form>
