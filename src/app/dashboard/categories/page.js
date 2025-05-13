@@ -204,9 +204,9 @@ export default function CategoriesPage() {
             <ArrowLeftIcon className="h-4 w-4 mr-1" />
             Back to Dashboard
           </button>
-          <h1 className="text-2xl font-bold text-gray-900">Manage Categories</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Create Category</h1>
           <p className="mt-2 text-sm text-gray-600">
-            Create and manage categories with their subcategories and messages
+            Create a new category with subcategories and messages
           </p>
         </div>
 
@@ -223,86 +223,9 @@ export default function CategoriesPage() {
           </div>
         )}
 
-        {/* Categories List */}
-        <div className="space-y-6">
-          {categories.map((category) => (
-            <div key={category._id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-gray-900">{category.name}</h2>
-                <button
-                  onClick={() => handleDeleteCategory(category._id)}
-                  className="text-red-600 hover:text-red-800 transition-colors duration-200"
-                >
-                  <TrashIcon className="h-5 w-5" />
-                </button>
-              </div>
-
-              {/* Subcategories */}
-              <div className="space-y-4">
-                {category.subcategories.map((subcategory) => (
-                  <div key={subcategory._id} className="bg-gray-50 rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-lg font-medium text-gray-900">{subcategory.name}</h3>
-                      <button
-                        onClick={() => handleDeleteSubcategory(category._id, subcategory._id)}
-                        className="text-red-600 hover:text-red-800 transition-colors duration-200"
-                      >
-                        <TrashIcon className="h-5 w-5" />
-                      </button>
-                    </div>
-
-                    {/* Messages */}
-                    <div className="space-y-2">
-                      {subcategory.messages.map((message) => (
-                        <div key={message._id} className="bg-white rounded-lg p-3">
-                          {editingMessage === message._id ? (
-                            <div className="flex items-center space-x-2">
-                              <textarea
-                                defaultValue={message.content}
-                                className="flex-1 rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-4 py-2"
-                                rows={2}
-                              />
-                              <button
-                                onClick={() => {
-                                  const newContent = document.querySelector(`textarea[defaultValue="${message.content}"]`).value;
-                                  handleEditMessage(category._id, subcategory._id, message._id, newContent);
-                                }}
-                                className="text-indigo-600 hover:text-indigo-800"
-                              >
-                                Save
-                              </button>
-                              <button
-                                onClick={() => setEditingMessage(null)}
-                                className="text-gray-600 hover:text-gray-800"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="flex items-center justify-between">
-                              <p className="text-gray-700">{message.content}</p>
-                              <button
-                                onClick={() => setEditingMessage(message._id)}
-                                className="text-gray-600 hover:text-gray-800"
-                              >
-                                <PencilIcon className="h-4 w-4" />
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-
         {/* Create Category Form */}
-        <div className="mt-8 bg-white rounded-xl shadow-sm border border-gray-100">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
           <div className="p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">Create New Category</h2>
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Category Name */}
               <div className="bg-gray-50 p-6 rounded-lg">

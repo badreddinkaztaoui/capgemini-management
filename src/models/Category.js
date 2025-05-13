@@ -1,6 +1,11 @@
 import mongoose from 'mongoose';
 
 const categorySchema = new mongoose.Schema({
+  status: {
+    type: String,
+    required: true,
+    default: 'Disapproved'
+  },
   name: {
     type: String,
     required: true,

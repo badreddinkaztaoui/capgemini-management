@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { MagnifyingGlassIcon, ChevronRightIcon, ClipboardDocumentIcon, CheckIcon, PlusIcon, TrashIcon, PencilIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, ChevronRightIcon, ClipboardDocumentIcon, CheckIcon, PlusIcon, TrashIcon, PencilIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline';
 
 export default function Dashboard() {
   const router = useRouter();
@@ -18,6 +18,9 @@ export default function Dashboard() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [editingMessage, setEditingMessage] = useState(null);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importFile, setImportFile] = useState(null);
+  const [isImporting, setIsImporting] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -164,6 +167,40 @@ export default function Dashboard() {
     }
   };
 
+  const handleImportFile = async (e) => {
+    e.preventDefault();
+    if (!importFile) return;
+
+    setIsImporting(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const formData = new FormData();
+      formData.append('file', importFile);
+
+      const response = await fetch('/api/categories/import', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to import data');
+      }
+
+      setSuccess('Data imported successfully');
+      setShowImportModal(false);
+      setImportFile(null);
+      await loadCategories();
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   const filteredSubCategories = subCategories.filter(subCategory =>
     String(subCategory).toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -191,6 +228,15 @@ export default function Dashboard() {
                   {user.role}
                 </span>
               </div>
+              {user.role === 'admin' && (
+                <button
+                  onClick={() => setShowImportModal(true)}
+                  className="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 flex items-center"
+                >
+                  <ArrowUpTrayIcon className="h-5 w-5 mr-2" />
+                  Import Excel
+                </button>
+              )}
               <button
                 onClick={() => router.push('/dashboard/categories')}
                 className="bg-teal-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-teal-700"
@@ -207,6 +253,59 @@ export default function Dashboard() {
           </div>
         </div>
       </nav>
+
+      {/* Import Modal */}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h2 className="text-xl font-semibold mb-4">Import Categories</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Upload an Excel file with columns: category, subcategory, and message
+            </p>
+            <form onSubmit={handleImportFile}>
+              <div className="mb-4">
+                <input
+                  type="file"
+                  accept=".xlsx,.xls"
+                  onChange={(e) => setImportFile(e.target.files[0])}
+                  className="block w-full text-sm text-gray-500
+                    file:mr-4 file:py-2 file:px-4
+                    file:rounded-md file:border-0
+                    file:text-sm file:font-semibold
+                    file:bg-indigo-50 file:text-indigo-700
+                    hover:file:bg-indigo-100"
+                />
+              </div>
+              <div className="flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowImportModal(false);
+                    setImportFile(null);
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={!importFile || isImporting}
+                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                >
+                  {isImporting ? (
+                    <>
+                      <div className="w-4 h-4 border-t-2 border-white rounded-full animate-spin mr-2"></div>
+                      Importing...
+                    </>
+                  ) : (
+                    'Import'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <main className="flex-1 pt-16 overflow-hidden">
         <div className="h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">

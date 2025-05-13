@@ -18,27 +18,31 @@ export async function importExcelDataToMongoDB(excelBuffer) {
     const categoriesMap = new Map();
 
     data.forEach(item => {
-      const categoryName = item.Categories;
-      const subcategoryName = item["Sous-categories"];
-      const message = item["Messages à envoyer "];
+      const status = item.status || 'active'; // Default to 'active' if not provided
+      const categoryName = item.categories;
+      const subcategoryName = item.subcategories;
+      const message = item.messages;
 
       if (!categoriesMap.has(categoryName)) {
-        categoriesMap.set(categoryName, new Map());
+        categoriesMap.set(categoryName, {
+          status,
+          subcategories: new Map()
+        });
       }
 
-      const subcategoriesMap = categoriesMap.get(categoryName);
-      if (!subcategoriesMap.has(subcategoryName)) {
-        subcategoriesMap.set(subcategoryName, []);
+      const categoryData = categoriesMap.get(categoryName);
+      if (!categoryData.subcategories.has(subcategoryName)) {
+        categoryData.subcategories.set(subcategoryName, []);
       }
 
-      subcategoriesMap.get(subcategoryName).push(message);
+      categoryData.subcategories.get(subcategoryName).push(message);
     });
 
     // Convert to MongoDB documents and save
-    for (const [categoryName, subcategoriesMap] of categoriesMap) {
+    for (const [categoryName, categoryData] of categoriesMap) {
       const subcategories = [];
 
-      for (const [subcategoryName, messages] of subcategoriesMap) {
+      for (const [subcategoryName, messages] of categoryData.subcategories) {
         subcategories.push({
           name: subcategoryName,
           messages: messages.map(content => ({ content }))
@@ -50,6 +54,7 @@ export async function importExcelDataToMongoDB(excelBuffer) {
         { name: categoryName },
         {
           name: categoryName,
+          status: categoryData.status,
           subcategories: subcategories
         },
         { upsert: true, new: true }
