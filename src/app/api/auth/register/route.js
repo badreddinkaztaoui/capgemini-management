@@ -3,9 +3,6 @@ import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
 import bcrypt from 'bcryptjs';
 
-export const maxDuration = 60; // Set maximum duration to 1 minute
-export const dynamic = 'force-dynamic';
-
 export async function POST(request) {
   try {
     const body = await request.json();
@@ -13,33 +10,21 @@ export async function POST(request) {
     // Validate required fields
     if (!body.email || !body.password || !body.name) {
       return NextResponse.json(
-        { error: 'Email, password, and name are required' },
+        { error: 'Missing required fields' },
         { status: 400 }
       );
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(body.email)) {
-      return NextResponse.json(
-        { error: 'Invalid email format' },
-        { status: 400 }
-      );
-    }
+    // Connect to database with timeout
+    const connectPromise = dbConnect();
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Database connection timeout')), 5000)
+    );
 
-    // Validate password strength
-    if (body.password.length < 6) {
-      return NextResponse.json(
-        { error: 'Password must be at least 6 characters long' },
-        { status: 400 }
-      );
-    }
-
-    // Connect to database
-    await dbConnect();
+    await Promise.race([connectPromise, timeoutPromise]);
 
     // Check for existing user
-    const existingUser = await User.findOne({ email: body.email });
+    const existingUser = await User.findOne({ email: body.email }).select('email').lean();
     if (existingUser) {
       return NextResponse.json(
         { error: 'Email already registered' },
@@ -48,17 +33,16 @@ export async function POST(request) {
     }
 
     // Hash password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(body.password, salt);
+    const hashedPassword = await bcrypt.hash(body.password, 10);
 
     // Create user with hashed password
     const user = await User.create({
       ...body,
       password: hashedPassword,
-      role: body.role || 'user' // Default role to 'user' if not specified
+      role: body.role || 'user' // Default role if not provided
     });
 
-    // Remove password from response
+    // Return user data without sensitive information
     const userResponse = {
       _id: user._id,
       name: user.name,
@@ -67,29 +51,15 @@ export async function POST(request) {
       createdAt: user.createdAt,
     };
 
-    return NextResponse.json(
-      {
-        success: true,
-        message: 'User registered successfully',
-        user: userResponse
-      },
-      { status: 201 }
-    );
+    return NextResponse.json({ user: userResponse }, { status: 201 });
   } catch (error) {
     console.error('Registration error:', error);
 
     // Handle specific error types
-    if (error.name === 'ValidationError') {
+    if (error.message === 'Database connection timeout') {
       return NextResponse.json(
-        { error: 'Invalid user data' },
-        { status: 400 }
-      );
-    }
-
-    if (error.code === 11000) {
-      return NextResponse.json(
-        { error: 'Email already registered' },
-        { status: 400 }
+        { error: 'Service temporarily unavailable. Please try again.' },
+        { status: 503 }
       );
     }
 
