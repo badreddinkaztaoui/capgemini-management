@@ -5,12 +5,24 @@ import Category from '@/models/Category';
 export async function GET() {
   try {
     await dbConnect();
-    const categories = await Category.find({}).sort({ createdAt: -1 });
+    const categories = await Category.find({ status: 'Approved' });
     return NextResponse.json({ categories });
   } catch (error) {
-    console.error('Error fetching categories:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch categories' },
+      { message: error.message || 'Failed to fetch categories' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE() {
+  try {
+    await dbConnect();
+    await Category.deleteMany({});
+    return NextResponse.json({ message: 'All categories deleted successfully' });
+  } catch (error) {
+    return NextResponse.json(
+      { message: error.message || 'Failed to delete categories' },
       { status: 500 }
     );
   }
@@ -21,7 +33,6 @@ export async function POST(request) {
     await dbConnect();
     const body = await request.json();
 
-    // Validate required fields
     if (!body.name) {
       return NextResponse.json(
         { error: 'Category name is required' },
@@ -29,13 +40,11 @@ export async function POST(request) {
       );
     }
 
-    // Create new category
     const category = new Category({
       name: body.name,
       subcategories: body.subcategories || []
     });
 
-    // Save to database
     await category.save();
 
     return NextResponse.json(

@@ -6,6 +6,7 @@ import { PlusIcon, ArrowLeftIcon, XMarkIcon, PencilIcon, TrashIcon, ChevronDownI
 
 export default function CategoriesPage() {
   const router = useRouter();
+  const [user, setUser] = useState(null);
   const [categories, setCategories] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -21,8 +22,22 @@ export default function CategoriesPage() {
   const [expandedCategories, setExpandedCategories] = useState(new Set());
 
   useEffect(() => {
+    checkAuth();
     loadCategories();
   }, []);
+
+  const checkAuth = async () => {
+    try {
+      const res = await fetch('/api/auth/me');
+      if (!res.ok) {
+        throw new Error('Not authenticated');
+      }
+      const data = await res.json();
+      setUser(data.user);
+    } catch (error) {
+      router.push('/auth/login');
+    }
+  };
 
   const loadCategories = async () => {
     try {
@@ -165,7 +180,9 @@ export default function CategoriesPage() {
           subcategories: subcategories.map(sub => ({
             name: sub.name,
             messages: sub.message ? [{ content: sub.message }] : []
-          }))
+          })),
+          status: user.role === 'admin' ? 'Approved' : 'Disapproved',
+          createdBy: user._id
         }),
       });
 
@@ -180,13 +197,25 @@ export default function CategoriesPage() {
         message: ''
       });
       setSubcategories([]);
-      setSuccess('Category created successfully!');
+      setSuccess(user.role === 'admin'
+        ? 'Category created successfully!'
+        : 'Category created and pending approval!');
     } catch (error) {
       setError(error.message);
     } finally {
       setIsLoading(false);
     }
   };
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Loading...</h1>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -259,15 +288,17 @@ export default function CategoriesPage() {
                       {category.status}
                     </span>
                   </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteCategory(category._id);
-                    }}
-                    className="text-red-600 hover:text-red-800"
-                  >
-                    <TrashIcon className="h-5 w-5" />
-                  </button>
+                  {user.role === 'admin' && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteCategory(category._id);
+                      }}
+                      className="text-red-600 hover:text-red-800"
+                    >
+                      <TrashIcon className="h-5 w-5" />
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -278,12 +309,14 @@ export default function CategoriesPage() {
                     <div key={subcategory._id} className="p-6 bg-gray-50 border-b border-gray-100 last:border-b-0">
                       <div className="flex items-center justify-between mb-4">
                         <h4 className="text-md font-medium text-gray-900">{subcategory.name}</h4>
-                        <button
-                          onClick={() => handleDeleteSubcategory(category._id, subcategory._id)}
-                          className="text-red-600 hover:text-red-800"
-                        >
-                          <TrashIcon className="h-4 w-4" />
-                        </button>
+                        {user.role === 'admin' && (
+                          <button
+                            onClick={() => handleDeleteSubcategory(category._id, subcategory._id)}
+                            className="text-red-600 hover:text-red-800"
+                          >
+                            <TrashIcon className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
 
                       {/* Messages */}
@@ -300,12 +333,14 @@ export default function CategoriesPage() {
                             ) : (
                               <div className="flex items-start justify-between">
                                 <p className="text-gray-700 whitespace-pre-wrap">{message.content}</p>
-                                <button
-                                  onClick={() => setEditingMessage(message._id)}
-                                  className="ml-2 text-gray-600 hover:text-gray-900"
-                                >
-                                  <PencilIcon className="h-4 w-4" />
-                                </button>
+                                {user.role === 'admin' && (
+                                  <button
+                                    onClick={() => setEditingMessage(message._id)}
+                                    className="ml-2 text-gray-600 hover:text-gray-900"
+                                  >
+                                    <PencilIcon className="h-4 w-4" />
+                                  </button>
+                                )}
                               </div>
                             )}
                           </div>
