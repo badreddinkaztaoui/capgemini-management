@@ -221,6 +221,25 @@ export default function CategoriesPage() {
     }
   };
 
+  const handleApproveCategory = async (categoryId, status) => {
+    try {
+      const response = await fetch(`/api/categories/${categoryId}/approve`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update category status');
+      }
+
+      // Refresh categories
+      await loadCategories();
+    } catch (error) {
+      console.error('Error updating category status:', error);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 p-6">
@@ -291,11 +310,37 @@ export default function CategoriesPage() {
                       <ChevronDownIcon className="h-5 w-5 text-gray-500" />
                     )}
                     <h3 className="text-lg font-semibold text-gray-900">{category.name}</h3>
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                      category.status === 'Approved' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {category.status}
-                    </span>
+                    <div className="flex items-center space-x-2">
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        category.status === 'Approved'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {category.status}
+                      </span>
+                      {isAdmin && category.status === 'Disapproved' && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleApproveCategory(category._id, 'Approved');
+                          }}
+                          className="px-3 py-1 text-sm text-white bg-green-600 hover:bg-green-700 rounded-md transition-colors duration-200"
+                        >
+                          Approve
+                        </button>
+                      )}
+                      {isAdmin && category.status === 'Approved' && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleApproveCategory(category._id, 'Disapproved');
+                          }}
+                          className="px-3 py-1 text-sm text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors duration-200"
+                        >
+                          Disapprove
+                        </button>
+                      )}
+                    </div>
                   </div>
                   {isAdmin && (
                     <button

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { MagnifyingGlassIcon, ClipboardDocumentIcon, CheckIcon, PencilIcon } from '@heroicons/react/24/outline';
+import NotificationBell from '@/components/NotificationBell';
 
 export default function Dashboard() {
   const router = useRouter();
@@ -153,6 +154,7 @@ export default function Dashboard() {
                   {user.role}
                 </span>
               </div>
+              <NotificationBell />
               <button
                 onClick={() => router.push('/dashboard/categories')}
                 className="bg-teal-600 text-white px-3 py-1.5 rounded-md text-sm font-medium hover:bg-teal-700 transition-colors duration-200 cursor-pointer"

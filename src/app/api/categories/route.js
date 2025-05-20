@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Category from '@/models/Category';
+import Notification from '@/models/Notification';
 
 export async function GET() {
   try {
@@ -32,11 +33,19 @@ export async function POST(request) {
     // Create new category
     const category = new Category({
       name: body.name,
+      status: 'Disapproved',
       subcategories: body.subcategories || []
     });
 
     // Save to database
     await category.save();
+
+    // Create notification for admin
+    await Notification.create({
+      type: 'category_approval',
+      categoryId: category._id,
+      categoryName: category.name
+    });
 
     return NextResponse.json(
       { message: 'Category created successfully', category },
