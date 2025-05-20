@@ -1,27 +1,24 @@
 import { NextResponse } from 'next/server';
 import { importExcelDataToMongoDB } from '@/utils/importExcelData';
+import dbConnect from '@/lib/mongodb';
+
+export const runtime = 'nodejs'; // Required for file uploads in Next.js API routes
 
 export async function POST(request) {
   try {
+    // Parse the incoming form data
     const formData = await request.formData();
     const file = formData.get('file');
-
     if (!file) {
-      return NextResponse.json(
-        { message: 'No file provided' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
     }
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
 
-    const buffer = await file.arrayBuffer();
+    await dbConnect();
     const result = await importExcelDataToMongoDB(buffer);
-
     return NextResponse.json(result);
   } catch (error) {
-    console.error('Error importing categories:', error);
-    return NextResponse.json(
-      { message: error.message || 'Failed to import categories' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error.message || 'Failed to import Excel data' }, { status: 500 });
   }
 }

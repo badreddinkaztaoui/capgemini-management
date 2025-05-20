@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { MagnifyingGlassIcon, ClipboardDocumentIcon, CheckIcon, PencilIcon, TrashIcon, ArrowUpTrayIcon, BellIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, ClipboardDocumentIcon, CheckIcon, PencilIcon } from '@heroicons/react/24/outline';
 
 export default function Dashboard() {
   const router = useRouter();
@@ -18,9 +18,6 @@ export default function Dashboard() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [editingMessage, setEditingMessage] = useState(null);
-  const [isImporting, setIsImporting] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -43,12 +40,6 @@ export default function Dashboard() {
     loadCategories();
   }, []);
 
-  useEffect(() => {
-    if (user?.role === 'admin') {
-      loadPendingCount();
-    }
-  }, [user]);
-
   const loadCategories = async () => {
     try {
       const response = await fetch('/api/categories');
@@ -62,18 +53,6 @@ export default function Dashboard() {
       console.error('Error loading categories:', error);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const loadPendingCount = async () => {
-    try {
-      const response = await fetch('/api/categories?status=Pending');
-      const data = await response.json();
-      if (data.categories) {
-        setPendingCount(data.categories.length);
-      }
-    } catch (error) {
-      console.error('Error loading pending count:', error);
     }
   };
 
@@ -147,70 +126,6 @@ export default function Dashboard() {
     }
   };
 
-  const handleImportExcel = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    setIsImporting(true);
-    setError('');
-    setSuccess('');
-
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const response = await fetch('/api/categories/import', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to import categories');
-      }
-
-      setSuccess('Categories imported successfully');
-      await loadCategories();
-    } catch (error) {
-      setError(error.message);
-    } finally {
-      setIsImporting(false);
-      event.target.value = ''; // Reset file input
-    }
-  };
-
-  const handleDeleteAllCategories = async () => {
-    if (!window.confirm('Are you sure you want to delete all categories? This action cannot be undone.')) {
-      return;
-    }
-
-    setIsDeleting(true);
-    setError('');
-    setSuccess('');
-
-    try {
-      const response = await fetch('/api/categories', {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete categories');
-      }
-
-      setSuccess('All categories deleted successfully');
-      setCategories([]);
-      setSelectedCategory(null);
-      setSelectedSubCategory(null);
-      setSubCategories([]);
-      setMessages([]);
-    } catch (error) {
-      setError(error.message);
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
   const filteredSubCategories = subCategories.filter(subCategory =>
     String(subCategory).toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -237,51 +152,6 @@ export default function Dashboard() {
                 }`}>
                   {user.role}
                 </span>
-              </div>
-              {user.role === 'admin' && pendingCount > 0 && (
-                <button
-                  onClick={() => router.push('/dashboard/approvals')}
-                  className="relative inline-flex items-center p-2 text-gray-600 hover:text-gray-900"
-                >
-                  <BellIcon className="h-6 w-6" />
-                  <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full">
-                    {pendingCount}
-                  </span>
-                </button>
-              )}
-              <div className="flex items-center space-x-2">
-                {user.role === 'admin' && (
-                  <>
-                    <div className="relative">
-                      <input
-                        type="file"
-                        accept=".xlsb,.xlsx"
-                        onChange={handleImportExcel}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                        disabled={isImporting}
-                      />
-                      <button
-                        className={`flex items-center space-x-1 bg-indigo-600 text-white px-3 py-1.5 rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors duration-200 ${
-                          isImporting ? 'opacity-50 cursor-not-allowed' : ''
-                        }`}
-                        disabled={isImporting}
-                      >
-                        <ArrowUpTrayIcon className="h-4 w-4" />
-                        <span>{isImporting ? 'Importing...' : 'Import Excel'}</span>
-                      </button>
-                    </div>
-                    <button
-                      onClick={handleDeleteAllCategories}
-                      disabled={isDeleting}
-                      className={`flex items-center space-x-1 bg-red-600 text-white px-3 py-1.5 rounded-md text-sm font-medium hover:bg-red-700 transition-colors duration-200 cursor-pointer ${
-                        isDeleting ? 'opacity-50 cursor-not-allowed' : ''
-                      }`}
-                    >
-                      <TrashIcon className="h-4 w-4" />
-                      <span>{isDeleting ? 'Deleting...' : 'Delete All'}</span>
-                    </button>
-                  </>
-                )}
               </div>
               <button
                 onClick={() => router.push('/dashboard/categories')}
@@ -342,27 +212,23 @@ export default function Dashboard() {
                   <div className="border border-gray-100 rounded-lg p-3 bg-gray-50">
                     <h2 className="text-sm font-semibold text-gray-700 mb-3">Categories</h2>
                     <div className="space-y-1.5">
-                      {categories.length === 0 ? (
-                        <p className="text-gray-400 text-xs">No approved categories found</p>
-                      ) : (
-                        categories.map((category) => (
-                          <div
-                            key={category._id}
-                            className="bg-white rounded-md p-2 shadow-sm hover:shadow transition-shadow duration-200"
+                      {categories.map((category) => (
+                        <div
+                          key={category._id}
+                          className="bg-white rounded-md p-2 shadow-sm hover:shadow transition-shadow duration-200"
+                        >
+                          <button
+                            onClick={() => handleCategoryClick(category.name)}
+                            className={`w-full text-left text-sm ${
+                              selectedCategory === category.name
+                                ? 'text-indigo-700 font-medium'
+                                : 'text-gray-600 hover:text-gray-900'
+                            }`}
                           >
-                            <button
-                              onClick={() => handleCategoryClick(category.name)}
-                              className={`w-full text-left text-sm ${
-                                selectedCategory === category.name
-                                  ? 'text-indigo-700 font-medium'
-                                  : 'text-gray-600 hover:text-gray-900'
-                              }`}
-                            >
-                              {category.name}
-                            </button>
-                          </div>
-                        ))
-                      )}
+                            {category.name}
+                          </button>
+                        </div>
+                      ))}
                     </div>
                   </div>
 
@@ -446,22 +312,13 @@ export default function Dashboard() {
                                 <p className="text-sm text-gray-600 pr-12 whitespace-pre-wrap">{message}</p>
                                 <div className="absolute top-2 right-2 flex space-x-1">
                                   {user.role === 'admin' && (
-                                    <>
-                                      <button
-                                        onClick={() => setEditingMessage(index)}
-                                        className="p-1.5 rounded-md bg-white shadow-sm hover:bg-gray-50 transition-colors duration-200 cursor-pointer"
-                                        title="Edit message"
-                                      >
-                                        <PencilIcon className="h-4 w-4 text-gray-500 group-hover:text-gray-700" />
-                                      </button>
-                                      <button
-                                        onClick={() => handleDeleteMessage(category._id, subcategory._id, message._id)}
-                                        className="p-1.5 rounded-md bg-white shadow-sm hover:bg-gray-50 transition-colors duration-200 cursor-pointer"
-                                        title="Delete message"
-                                      >
-                                        <TrashIcon className="h-4 w-4 text-gray-500 group-hover:text-gray-700" />
-                                      </button>
-                                    </>
+                                    <button
+                                      onClick={() => setEditingMessage(index)}
+                                      className="p-1.5 rounded-md bg-white shadow-sm hover:bg-gray-50 transition-colors duration-200 cursor-pointer"
+                                      title="Edit message"
+                                    >
+                                      <PencilIcon className="h-4 w-4 text-gray-500 group-hover:text-gray-700" />
+                                    </button>
                                   )}
                                   <button
                                     onClick={() => handleCopyMessage(message, index)}
