@@ -80,7 +80,7 @@ export default function NotificationBell() {
                   </svg>
                 </div>
                 <p className="text-sm text-gray-500">No notifications yet</p>
-                <p className="text-xs text-gray-400 mt-1">We'll notify you when something arrives</p>
+                <p className="text-xs text-gray-400 mt-1">We&apos;ll notify you when something arrives</p>
               </div>
             ) : (
               <div className="divide-y divide-gray-100">

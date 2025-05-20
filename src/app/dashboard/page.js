@@ -272,6 +272,7 @@ export default function Dashboard() {
                             className="bg-white rounded-lg p-4 relative group hover:shadow-md transition-all duration-200 border border-gray-100"
                           >
                             <p className="text-sm text-gray-600 pr-12 whitespace-pre-wrap">{message}</p>
+                            <p className="text-xs text-gray-400 mt-2 italic">- {user.name}</p>
                             <div className="absolute top-3 right-3 flex space-x-2">
                               <button
                                 onClick={() => handleCopyMessage(message, index)}
