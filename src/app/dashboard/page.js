@@ -67,9 +67,11 @@ export default function Dashboard() {
 
   const loadPendingCount = async () => {
     try {
-      const response = await fetch('/api/categories/review/count');
+      const response = await fetch('/api/categories?status=Pending');
       const data = await response.json();
-      setPendingCount(data.count);
+      if (data.categories) {
+        setPendingCount(data.categories.length);
+      }
     } catch (error) {
       console.error('Error loading pending count:', error);
     }
@@ -238,7 +240,7 @@ export default function Dashboard() {
               </div>
               {user.role === 'admin' && pendingCount > 0 && (
                 <button
-                  onClick={() => router.push('/dashboard/review')}
+                  onClick={() => router.push('/dashboard/approvals')}
                   className="relative inline-flex items-center p-2 text-gray-600 hover:text-gray-900"
                 >
                   <BellIcon className="h-6 w-6" />
@@ -405,20 +407,13 @@ export default function Dashboard() {
                             className="bg-gray-50 rounded-md p-3 relative group hover:bg-gray-100 transition-colors duration-200"
                           >
                             {editingMessage === index ? (
-                              <div className="flex flex-col space-y-3">
+                              <div className="flex items-center space-x-2">
                                 <textarea
                                   defaultValue={message}
-                                  className="w-full rounded-lg border-gray-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm px-4 py-3 bg-white resize-none transition-all duration-200"
-                                  rows={3}
-                                  placeholder="Enter your message..."
+                                  className="flex-1 rounded-md border-gray-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm px-2 py-1.5"
+                                  rows={2}
                                 />
-                                <div className="flex justify-end space-x-2">
-                                  <button
-                                    onClick={() => setEditingMessage(null)}
-                                    className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors duration-200"
-                                  >
-                                    Cancel
-                                  </button>
+                                <div className="flex space-x-1">
                                   <button
                                     onClick={() => {
                                       const newContent = document.querySelector(`textarea[defaultValue="${message}"]`).value;
@@ -434,9 +429,15 @@ export default function Dashboard() {
                                         newContent
                                       );
                                     }}
-                                    className="px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors duration-200"
+                                    className="text-xs px-2 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors duration-200 cursor-pointer"
                                   >
-                                    Save Changes
+                                    Save
+                                  </button>
+                                  <button
+                                    onClick={() => setEditingMessage(null)}
+                                    className="text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors duration-200 cursor-pointer"
+                                  >
+                                    Cancel
                                   </button>
                                 </div>
                               </div>

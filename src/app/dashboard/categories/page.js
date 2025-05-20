@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { PlusIcon, ArrowLeftIcon, XMarkIcon, PencilIcon, TrashIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
 
@@ -21,12 +21,7 @@ export default function CategoriesPage() {
   const [editingSubcategory, setEditingSubcategory] = useState(null);
   const [expandedCategories, setExpandedCategories] = useState(new Set());
 
-  useEffect(() => {
-    checkAuth();
-    loadCategories();
-  }, []);
-
-  const checkAuth = async () => {
+  const checkAuth = useCallback(async () => {
     try {
       const res = await fetch('/api/auth/me');
       if (!res.ok) {
@@ -37,9 +32,9 @@ export default function CategoriesPage() {
     } catch (error) {
       router.push('/auth/login');
     }
-  };
+  }, [router]);
 
-  const loadCategories = async () => {
+  const loadCategories = useCallback(async () => {
     try {
       const response = await fetch('/api/categories');
       const data = await response.json();
@@ -52,7 +47,12 @@ export default function CategoriesPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    checkAuth();
+    loadCategories();
+  }, [checkAuth, loadCategories]);
 
   const toggleCategory = (categoryId) => {
     setExpandedCategories(prev => {
@@ -180,9 +180,7 @@ export default function CategoriesPage() {
           subcategories: subcategories.map(sub => ({
             name: sub.name,
             messages: sub.message ? [{ content: sub.message }] : []
-          })),
-          status: user.role === 'admin' ? 'Approved' : 'Disapproved',
-          createdBy: user._id
+          }))
         }),
       });
 
@@ -197,9 +195,7 @@ export default function CategoriesPage() {
         message: ''
       });
       setSubcategories([]);
-      setSuccess(user.role === 'admin'
-        ? 'Category created successfully!'
-        : 'Category created and pending approval!');
+      setSuccess('Category created successfully!');
     } catch (error) {
       setError(error.message);
     } finally {

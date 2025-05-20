@@ -1,31 +1,37 @@
 import mongoose from 'mongoose';
 
-const categorySchema = new mongoose.Schema({
-  status: {
+const messageSchema = new mongoose.Schema({
+  content: {
     type: String,
-    required: true,
-    default: 'Disapproved'
-  },
+    required: true
+  }
+}, { timestamps: true });
+
+const subcategorySchema = new mongoose.Schema({
   name: {
     type: String,
-    required: true,
-    unique: true
+    required: true
   },
-  subcategories: [{
-    name: {
-      type: String,
-      required: true
-    },
-    messages: [{
-      content: {
-        type: String,
-        required: true
-      }
-    }]
-  }]
-}, {
-  timestamps: true
-});
+  messages: [messageSchema]
+}, { timestamps: true });
+
+const categorySchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true
+  },
+  status: {
+    type: String,
+    enum: ['Pending', 'Approved', 'Disapproved'],
+    default: 'Pending'
+  },
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  subcategories: [subcategorySchema]
+}, { timestamps: true });
 
 const Category = mongoose.models.Category || mongoose.model('Category', categorySchema);
 

@@ -1,61 +1,56 @@
 import { NextResponse } from 'next/server';
-import dbConnect from '@/lib/mongodb';
 import Category from '@/models/Category';
+import dbConnect from '@/lib/mongodb';
 
-export async function GET() {
+export async function GET(request) {
   try {
     await dbConnect();
-    const categories = await Category.find({ status: 'Approved' });
+    const { searchParams } = new URL(request.url);
+    const status = searchParams.get('status');
+
+    const query = status ? { status } : { status: 'Approved' };
+    const categories = await Category.find(query)
+      .populate('createdBy', 'name')
+      .sort({ createdAt: -1 });
+
     return NextResponse.json({ categories });
   } catch (error) {
-    return NextResponse.json(
-      { message: error.message || 'Failed to fetch categories' },
-      { status: 500 }
-    );
-  }
-}
-
-export async function DELETE() {
-  try {
-    await dbConnect();
-    await Category.deleteMany({});
-    return NextResponse.json({ message: 'All categories deleted successfully' });
-  } catch (error) {
-    return NextResponse.json(
-      { message: error.message || 'Failed to delete categories' },
-      { status: 500 }
-    );
+    console.error('Error fetching categories:', error);
+    return NextResponse.json({ message: 'Error fetching categories' }, { status: 500 });
   }
 }
 
 export async function POST(request) {
   try {
     await dbConnect();
-    const body = await request.json();
+    const data = await request.json();
+    const { name, subcategories, userId } = data;
 
-    if (!body.name) {
-      return NextResponse.json(
-        { error: 'Category name is required' },
-        { status: 400 }
-      );
+    if (!name || !userId) {
+      return NextResponse.json({ message: 'Name and user ID are required' }, { status: 400 });
     }
 
-    const category = new Category({
-      name: body.name,
-      subcategories: body.subcategories || []
+    const category = await Category.create({
+      name,
+      subcategories,
+      createdBy: userId,
+      status: 'Pending'
     });
 
-    await category.save();
-
-    return NextResponse.json(
-      { message: 'Category created successfully', category },
-      { status: 201 }
-    );
+    return NextResponse.json({ message: 'Category created successfully', category }, { status: 201 });
   } catch (error) {
     console.error('Error creating category:', error);
-    return NextResponse.json(
-      { error: 'Failed to create category' },
-      { status: 500 }
-    );
+    return NextResponse.json({ message: 'Error creating category' }, { status: 500 });
+  }
+}
+
+export async function DELETE(request) {
+  try {
+    await dbConnect();
+    await Category.deleteMany({});
+    return NextResponse.json({ message: 'All categories deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting categories:', error);
+    return NextResponse.json({ message: 'Error deleting categories' }, { status: 500 });
   }
 }
