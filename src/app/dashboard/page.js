@@ -405,13 +405,20 @@ export default function Dashboard() {
                             className="bg-gray-50 rounded-md p-3 relative group hover:bg-gray-100 transition-colors duration-200"
                           >
                             {editingMessage === index ? (
-                              <div className="flex items-center space-x-2">
+                              <div className="flex flex-col space-y-3">
                                 <textarea
                                   defaultValue={message}
-                                  className="flex-1 rounded-md border-gray-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm px-2 py-1.5"
-                                  rows={2}
+                                  className="w-full rounded-lg border-gray-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm px-4 py-3 bg-white resize-none transition-all duration-200"
+                                  rows={3}
+                                  placeholder="Enter your message..."
                                 />
-                                <div className="flex space-x-1">
+                                <div className="flex justify-end space-x-2">
+                                  <button
+                                    onClick={() => setEditingMessage(null)}
+                                    className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors duration-200"
+                                  >
+                                    Cancel
+                                  </button>
                                   <button
                                     onClick={() => {
                                       const newContent = document.querySelector(`textarea[defaultValue="${message}"]`).value;
@@ -427,15 +434,9 @@ export default function Dashboard() {
                                         newContent
                                       );
                                     }}
-                                    className="text-xs px-2 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors duration-200 cursor-pointer"
+                                    className="px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors duration-200"
                                   >
-                                    Save
-                                  </button>
-                                  <button
-                                    onClick={() => setEditingMessage(null)}
-                                    className="text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors duration-200 cursor-pointer"
-                                  >
-                                    Cancel
+                                    Save Changes
                                   </button>
                                 </div>
                               </div>

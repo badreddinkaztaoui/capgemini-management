@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeftIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { ArrowLeftIcon, CheckIcon, XMarkIcon, PencilIcon } from '@heroicons/react/24/outline';
 
 export default function ReviewPage() {
   const router = useRouter();
@@ -11,6 +11,7 @@ export default function ReviewPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [editingMessage, setEditingMessage] = useState(null);
 
   useEffect(() => {
     checkAuth();
@@ -83,12 +84,33 @@ export default function ReviewPage() {
     }
   };
 
+  const handleEditMessage = async (categoryId, subcategoryId, messageId, content) => {
+    try {
+      const response = await fetch(`/api/categories/${categoryId}/subcategories/${subcategoryId}/messages/${messageId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ content }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to edit message');
+      }
+
+      setSuccess('Message edited successfully');
+      await loadCategories();
+    } catch (error) {
+      setError(error.message);
+    }
+  };
+
   if (!user || user.role !== 'admin') {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h1>
-          <p className="text-gray-600">You don't have permission to access this page.</p>
+          <p className="text-gray-600">You don&apos;t have permission to access this page.</p>
           <button
             onClick={() => router.push('/dashboard')}
             className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
@@ -187,11 +209,50 @@ export default function ReviewPage() {
                   {category.subcategories.map((subcategory) => (
                     <div key={subcategory._id} className="bg-gray-50 rounded-lg p-4">
                       <h4 className="text-md font-medium text-gray-900">{subcategory.name}</h4>
-                      {subcategory.messages.map((message) => (
-                        <p key={message._id} className="mt-2 text-sm text-gray-600">
-                          {message.content}
-                        </p>
-                      ))}
+                      {/* Messages */}
+                      <div className="space-y-3">
+                        {subcategory.messages.map((message) => (
+                          <div key={message._id} className="bg-white p-4 rounded-lg border border-gray-200">
+                            {editingMessage === message._id ? (
+                              <div className="flex flex-col space-y-3">
+                                <textarea
+                                  value={message.content}
+                                  onChange={(e) => handleEditMessage(category._id, subcategory._id, message._id, e.target.value)}
+                                  className="w-full rounded-lg border-gray-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm px-4 py-3 bg-white resize-none transition-all duration-200"
+                                  rows={3}
+                                  placeholder="Enter your message..."
+                                />
+                                <div className="flex justify-end space-x-2">
+                                  <button
+                                    onClick={() => setEditingMessage(null)}
+                                    className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors duration-200"
+                                  >
+                                    Cancel
+                                  </button>
+                                  <button
+                                    onClick={() => setEditingMessage(null)}
+                                    className="px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors duration-200"
+                                  >
+                                    Save Changes
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex items-start justify-between">
+                                <p className="text-gray-700 whitespace-pre-wrap">{message.content}</p>
+                                {user.role === 'admin' && (
+                                  <button
+                                    onClick={() => setEditingMessage(message._id)}
+                                    className="ml-2 text-gray-600 hover:text-gray-900"
+                                  >
+                                    <PencilIcon className="h-4 w-4" />
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   ))}
                 </div>
