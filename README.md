@@ -42,7 +42,7 @@ src/
 
 1. Clone the repository:
 ```bash
-git clone [[repository-url]](https://github.com/badreddinkaztaoui/capgemini-management.git)
+git clone https://github.com/badreddinkaztaoui/capgemini-management.git
 cd capgemini-management
 ```
 
