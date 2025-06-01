@@ -22,7 +22,6 @@ export async function POST(request) {
     await dbConnect();
     const body = await request.json();
 
-    // Validate required fields
     if (!body.name) {
       return NextResponse.json(
         { error: 'Category name is required' },
@@ -30,17 +29,14 @@ export async function POST(request) {
       );
     }
 
-    // Create new category
     const category = new Category({
       name: body.name,
       status: 'Disapproved',
       subcategories: body.subcategories || []
     });
 
-    // Save to database
     await category.save();
 
-    // Create notification for admin
     await Notification.create({
       type: 'category_approval',
       categoryId: category._id,

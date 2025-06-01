@@ -3,9 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { PlusIcon, ArrowLeftIcon, XMarkIcon, PencilIcon, TrashIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function CategoriesPage() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [user, setUser] = useState(null);
   const [categories, setCategories] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -18,7 +20,6 @@ export default function CategoriesPage() {
   });
   const [subcategories, setSubcategories] = useState([]);
   const [editingMessage, setEditingMessage] = useState(null);
-  const [editingSubcategory, setEditingSubcategory] = useState(null);
   const [expandedCategories, setExpandedCategories] = useState(new Set());
 
   useEffect(() => {
@@ -166,7 +167,6 @@ export default function CategoriesPage() {
       }
     ]);
 
-    // Reset subcategory form fields
     setFormData({
       ...formData,
       subcategoryName: '',
@@ -206,7 +206,6 @@ export default function CategoriesPage() {
         throw new Error('Failed to create category');
       }
 
-      // Reset form and show success message
       setFormData({
         categoryName: '',
         subcategoryName: '',
@@ -233,7 +232,6 @@ export default function CategoriesPage() {
         throw new Error('Failed to update category status');
       }
 
-      // Refresh categories
       await loadCategories();
     } catch (error) {
       console.error('Error updating category status:', error);
@@ -267,15 +265,15 @@ export default function CategoriesPage() {
             className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 mb-4"
           >
             <ArrowLeftIcon className="h-4 w-4 mr-1" />
-            Back to Dashboard
+            {t('backToDashboard')}
           </button>
-          <h1 className="text-2xl font-bold text-gray-900">Categories Management</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{t('categoriesManagement')}</h1>
           <p className="mt-2 text-sm text-gray-600">
-            Manage your categories, subcategories, and messages
+            {t('manageCategories')}
           </p>
           {!isAdmin && (
             <p className="mt-2 text-sm text-yellow-600">
-              You can create new categories but cannot edit or delete existing ones.
+              {t('permissionWarning')}
             </p>
           )}
         </div>
@@ -316,7 +314,7 @@ export default function CategoriesPage() {
                           ? 'bg-green-100 text-green-800'
                           : 'bg-yellow-100 text-yellow-800'
                       }`}>
-                        {category.status}
+                        {category.status === 'Approved' ? t('approved') : t('disapproved')}
                       </span>
                       {isAdmin && category.status === 'Disapproved' && (
                         <button
@@ -326,7 +324,7 @@ export default function CategoriesPage() {
                           }}
                           className="px-3 py-1 text-sm text-white bg-green-600 hover:bg-green-700 rounded-md transition-colors duration-200"
                         >
-                          Approve
+                          {t('approve')}
                         </button>
                       )}
                       {isAdmin && category.status === 'Approved' && (
@@ -337,7 +335,7 @@ export default function CategoriesPage() {
                           }}
                           className="px-3 py-1 text-sm text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors duration-200"
                         >
-                          Disapprove
+                          {t('disapprove')}
                         </button>
                       )}
                     </div>
@@ -391,13 +389,13 @@ export default function CategoriesPage() {
                                     onClick={() => setEditingMessage(null)}
                                     className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors duration-200"
                                   >
-                                    Cancel
+                                    {t('cancel')}
                                   </button>
                                   <button
                                     onClick={() => handleEditMessage(category._id, subcategory._id, message._id, message.content)}
                                     className="px-3 py-1.5 text-sm text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors duration-200"
                                   >
-                                    Save
+                                    {t('save')}
                                   </button>
                                 </div>
                               </div>
@@ -433,14 +431,14 @@ export default function CategoriesPage() {
                 <div className="p-2 bg-indigo-100 rounded-lg">
                   <PlusIcon className="h-6 w-6 text-indigo-600" />
                 </div>
-                <h2 className="text-xl font-semibold text-gray-900">Create New Category</h2>
+                <h2 className="text-xl font-semibold text-gray-900">{t('createNewCategory')}</h2>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-8">
                 {/* Category Name */}
                 <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
                   <label htmlFor="categoryName" className="block text-sm font-medium text-gray-700 mb-2">
-                    Category Name
+                    {t('categoryName')}
                   </label>
                   <div className="relative">
                     <input
@@ -449,7 +447,7 @@ export default function CategoriesPage() {
                       value={formData.categoryName}
                       onChange={(e) => setFormData({ ...formData, categoryName: e.target.value })}
                       className="block w-full rounded-lg border-gray-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-4 py-3 pl-10"
-                      placeholder="Enter category name"
+                      placeholder={t('enterCategoryName')}
                       required
                     />
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -463,7 +461,7 @@ export default function CategoriesPage() {
                 {/* Subcategories List */}
                 {subcategories.length > 0 && (
                   <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-                    <h3 className="text-sm font-medium text-gray-700 mb-4">Added Subcategories</h3>
+                    <h3 className="text-sm font-medium text-gray-700 mb-4">{t('addedSubcategories')}</h3>
                     <div className="space-y-3">
                       {subcategories.map((sub, index) => (
                         <div key={index} className="bg-indigo-50 p-4 rounded-lg border border-indigo-100 group hover:bg-indigo-100 transition-colors duration-200">
@@ -503,13 +501,13 @@ export default function CategoriesPage() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                       </svg>
                     </div>
-                    <h3 className="text-sm font-medium text-gray-700">Add Subcategory</h3>
+                    <h3 className="text-sm font-medium text-gray-700">{t('addSubcategory')}</h3>
                   </div>
 
                   <div className="space-y-4">
                     <div>
                       <label htmlFor="subcategoryName" className="block text-sm font-medium text-gray-700 mb-2">
-                        Subcategory Name
+                        {t('subcategoryName')}
                       </label>
                       <div className="relative">
                         <input
@@ -518,7 +516,7 @@ export default function CategoriesPage() {
                           value={formData.subcategoryName}
                           onChange={(e) => setFormData({ ...formData, subcategoryName: e.target.value })}
                           className="block w-full rounded-lg border-gray-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-4 py-3 pl-10"
-                          placeholder="Enter subcategory name"
+                          placeholder={t('enterSubcategoryName')}
                         />
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                           <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -529,7 +527,7 @@ export default function CategoriesPage() {
                     </div>
                     <div>
                       <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-2">
-                        Message
+                        {t('message')}
                       </label>
                       <div className="relative">
                         <textarea
@@ -537,7 +535,7 @@ export default function CategoriesPage() {
                           value={formData.message}
                           onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                           className="block w-full rounded-lg border-gray-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-4 py-3 pl-10"
-                          placeholder="Enter message content"
+                          placeholder={t('enterMessageContent')}
                           rows="3"
                         />
                         <div className="absolute top-3 left-0 pl-3 flex items-start pointer-events-none">
@@ -553,7 +551,7 @@ export default function CategoriesPage() {
                       className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200"
                     >
                       <PlusIcon className="h-4 w-4 mr-2" />
-                      Add Subcategory
+                      {t('addSubcategory')}
                     </button>
                   </div>
                 </div>
@@ -570,14 +568,14 @@ export default function CategoriesPage() {
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
-                        Creating...
+                        {t('creating')}
                       </>
                     ) : (
                       <>
                         <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                         </svg>
-                        Create Category
+                        {t('createCategory')}
                       </>
                     )}
                   </button>
