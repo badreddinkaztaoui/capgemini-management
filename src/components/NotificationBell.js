@@ -17,7 +17,14 @@ export default function NotificationBell() {
 
   const fetchNotifications = async () => {
     try {
-      const response = await fetch('/api/notifications');
+      const response = await fetch('/api/notifications', {
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
       const data = await response.json();
       setNotifications(data.notifications);
     } catch (error) {
@@ -39,7 +46,7 @@ export default function NotificationBell() {
     }
   };
 
-  const unreadCount = notifications.filter(n => !n.isRead).length;
+  const unreadCount = notifications?.filter(n => !n.isRead).length;
 
   return (
     <div className="relative">
@@ -72,7 +79,7 @@ export default function NotificationBell() {
             </div>
           </div>
           <div className="max-h-[32rem] overflow-y-auto">
-            {notifications.length === 0 ? (
+            {notifications?.length === 0 ? (
               <div className="p-8 text-center">
                 <div className="mx-auto w-12 h-12 text-gray-400 mb-3">
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -120,7 +127,7 @@ export default function NotificationBell() {
               </div>
             )}
           </div>
-          {notifications.length > 0 && (
+          {notifications?.length > 0 && (
             <div className="p-3 bg-gray-50/50 border-t border-gray-100">
               <button
                 onClick={() => setIsOpen(false)}

@@ -1,15 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { MagnifyingGlassIcon, ClipboardDocumentIcon, CheckIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, ClipboardDocumentIcon, CheckIcon, ArrowDownTrayIcon, TrashIcon, ChevronDownIcon, ChevronUpIcon, LanguageIcon } from '@heroicons/react/24/outline';
 import NotificationBell from '@/components/NotificationBell';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { useLanguage } from '@/context/LanguageContext';
 
 export default function Dashboard() {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [user, setUser] = useState(null);
   const [categories, setCategories] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -20,6 +20,12 @@ export default function Dashboard() {
   const [messages, setMessages] = useState([]);
   const [copiedMessageId, setCopiedMessageId] = useState(null);
   const [error, setError] = useState('');
+  const [importSuccess, setImportSuccess] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const fileInputRef = useRef(null);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -40,12 +46,14 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadCategories();
-  }, []);
+  }, [language]);
 
   const loadCategories = async () => {
     try {
-      const response = await fetch('/api/categories');
+      const url = language === 'en' ? '/api/english-categories' : '/api/categories';
+      const response = await fetch(url);
       const data = await response.json();
+      console.log(data);
 
       if (data.categories) {
         const filteredCategories = data.categories.filter(cat => cat.status === 'Approved');
@@ -86,6 +94,92 @@ export default function Dashboard() {
       router.push('/auth/login');
     } catch (error) {
       console.error('Logout failed:', error);
+    }
+  };
+
+  const handleClearEnglishCategories = async () => {
+    if (!confirm('Are you sure you want to clear all English categories? This action cannot be undone.')) {
+      return;
+    }
+
+    setIsClearing(true);
+    setError('');
+    setImportSuccess('');
+
+    try {
+      const response = await fetch('/api/english-categories/clear', {
+        method: 'DELETE',
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to clear English categories');
+      }
+
+      setImportSuccess(result.message || 'English categories database cleared successfully!');
+      if (language === 'en') {
+        loadCategories();
+      }
+    } catch (error) {
+      console.error('Error clearing English categories:', error);
+      setError(error.message || 'Failed to clear English categories');
+    } finally {
+      setIsClearing(false);
+    }
+  };
+
+  const handleFileChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      setSelectedFile(file);
+    }
+  };
+
+  const handleImportEnglishData = async () => {
+    if (!selectedFile) {
+      setError('Please select an Excel file first');
+      return;
+    }
+
+    if (!confirm('Are you sure you want to import data from the selected Excel file to the English categories collection?')) {
+      return;
+    }
+
+    setIsImporting(true);
+    setError('');
+    setImportSuccess('');
+
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      const response = await fetch('/api/english-categories/import', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to import data');
+      }
+
+      setImportSuccess('Data successfully imported to English categories!');
+      setSelectedFile(null);
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+
+      if (language === 'en') {
+        loadCategories();
+      }
+    } catch (error) {
+      console.error('Error importing data:', error);
+      setError(error.message || 'Failed to import data');
+    } finally {
+      setIsImporting(false);
     }
   };
 
@@ -175,6 +269,17 @@ export default function Dashboard() {
             </div>
           )}
 
+          {importSuccess && (
+            <div className="mb-6 bg-green-50 border-l-4 border-green-500 p-4 rounded-lg shadow-sm">
+              <div className="flex items-center">
+                <svg className="h-5 w-5 text-green-500 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                <p className="text-sm text-green-700">{importSuccess}</p>
+              </div>
+            </div>
+          )}
+
           <div className="h-full bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="h-full p-6 overflow-y-auto">
               <div className="mb-6">
@@ -222,7 +327,7 @@ export default function Dashboard() {
                             }`}
                           >
                             <span className="w-2 h-2 rounded-full bg-indigo-500 mr-2"></span>
-                            {category.name}
+                            {category.name || "Default Category"}
                           </button>
                         </div>
                       ))}

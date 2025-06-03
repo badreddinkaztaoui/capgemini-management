@@ -1,15 +1,42 @@
 import { NextResponse } from 'next/server';
+import mongoose from 'mongoose';
 import dbConnect from '@/lib/mongodb';
 import Notification from '@/models/Notification';
 
 export async function GET() {
   try {
     await dbConnect();
-    const notifications = await Notification.find({})
-      .sort({ createdAt: -1 })
-      .populate('categoryId', 'name status');
+    
+    // First try to get notifications without populate to check if basic query works
+    const notifications = await Notification.find({}).sort({ createdAt: -1 });
+    
+    // Then try to populate with error handling for each document
+    const populatedNotifications = await Promise.all(
+      notifications.map(async (notification) => {
+        try {
+          // Convert to plain object for manipulation
+          const notifObj = notification.toObject();
+          
+          // Only try to populate if categoryId exists
+          if (notification.categoryId) {
+            const Category = mongoose.models.Category;
+            if (Category) {
+              const category = await Category.findById(notification.categoryId).select('name status');
+              if (category) {
+                notifObj.categoryId = category;
+              }
+            }
+          }
+          
+          return notifObj;
+        } catch (err) {
+          console.error(`Error populating notification ${notification._id}:`, err);
+          return notification.toObject();
+        }
+      })
+    );
 
-    return NextResponse.json({ notifications });
+    return NextResponse.json({ notifications: populatedNotifications });
   } catch (error) {
     console.error('Error fetching notifications:', error);
     return NextResponse.json(

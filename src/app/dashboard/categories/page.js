@@ -43,9 +43,13 @@ export default function CategoriesPage() {
   const isAdmin = user?.role === 'admin';
   const isMember = user?.role === 'member';
 
+  const { language } = useLanguage();
+
   const loadCategories = async () => {
     try {
-      const response = await fetch('/api/categories');
+      // Use the appropriate API endpoint based on language
+      const endpoint = language === 'en' ? '/api/english-categories' : '/api/categories';
+      const response = await fetch(endpoint);
       const data = await response.json();
       if (data.categories) {
         setCategories(data.categories);
@@ -57,6 +61,13 @@ export default function CategoriesPage() {
       setIsLoading(false);
     }
   };
+  
+  // Reload categories when language changes
+  useEffect(() => {
+    if (user) {
+      loadCategories();
+    }
+  }, [language]);
 
   const toggleCategory = (categoryId) => {
     setExpandedCategories(prev => {
@@ -79,7 +90,9 @@ export default function CategoriesPage() {
     if (!confirm('Are you sure you want to delete this category?')) return;
 
     try {
-      const response = await fetch(`/api/categories/${categoryId}`, {
+      // Use the appropriate API endpoint based on language
+      const endpoint = language === 'en' ? `/api/english-categories/${categoryId}` : `/api/categories/${categoryId}`;
+      const response = await fetch(endpoint, {
         method: 'DELETE',
       });
 
@@ -103,7 +116,12 @@ export default function CategoriesPage() {
     if (!confirm('Are you sure you want to delete this subcategory?')) return;
 
     try {
-      const response = await fetch(`/api/categories/${categoryId}/subcategories/${subcategoryId}`, {
+      // Use the appropriate API endpoint based on language
+      const endpoint = language === 'en' 
+        ? `/api/english-categories/${categoryId}/subcategories/${subcategoryId}` 
+        : `/api/categories/${categoryId}/subcategories/${subcategoryId}`;
+      
+      const response = await fetch(endpoint, {
         method: 'DELETE',
       });
 
@@ -131,7 +149,12 @@ export default function CategoriesPage() {
 
       message.content = newContent;
 
-      const response = await fetch(`/api/categories/${categoryId}/subcategories/${subcategoryId}`, {
+      // Use the appropriate API endpoint based on language
+      const endpoint = language === 'en' 
+        ? `/api/english-categories/${categoryId}/subcategories/${subcategoryId}` 
+        : `/api/categories/${categoryId}/subcategories/${subcategoryId}`;
+      
+      const response = await fetch(endpoint, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -188,7 +211,9 @@ export default function CategoriesPage() {
     }
 
     try {
-      const response = await fetch('/api/categories', {
+      // Use the appropriate API endpoint based on language
+      const endpoint = language === 'en' ? '/api/english-categories' : '/api/categories';
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -222,7 +247,12 @@ export default function CategoriesPage() {
 
   const handleApproveCategory = async (categoryId, status) => {
     try {
-      const response = await fetch(`/api/categories/${categoryId}/approve`, {
+      // Use the appropriate API endpoint based on language
+      const endpoint = language === 'en' 
+        ? `/api/english-categories/${categoryId}/approve` 
+        : `/api/categories/${categoryId}/approve`;
+      
+      const response = await fetch(endpoint, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status })
