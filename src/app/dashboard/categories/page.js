@@ -21,6 +21,11 @@ export default function CategoriesPage() {
   const [subcategories, setSubcategories] = useState([]);
   const [editingMessage, setEditingMessage] = useState(null);
   const [expandedCategories, setExpandedCategories] = useState(new Set());
+  const [addingSubcategoryTo, setAddingSubcategoryTo] = useState(null);
+  const [newSubcategoryData, setNewSubcategoryData] = useState({
+    name: '',
+    message: ''
+  });
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -47,7 +52,6 @@ export default function CategoriesPage() {
 
   const loadCategories = async () => {
     try {
-      // Use the appropriate API endpoint based on language
       const endpoint = language === 'en' ? '/api/english-categories' : '/api/categories';
       const response = await fetch(endpoint);
       const data = await response.json();
@@ -61,7 +65,7 @@ export default function CategoriesPage() {
       setIsLoading(false);
     }
   };
-  
+
   // Reload categories when language changes
   useEffect(() => {
     if (user) {
@@ -117,10 +121,10 @@ export default function CategoriesPage() {
 
     try {
       // Use the appropriate API endpoint based on language
-      const endpoint = language === 'en' 
-        ? `/api/english-categories/${categoryId}/subcategories/${subcategoryId}` 
+      const endpoint = language === 'en'
+        ? `/api/english-categories/${categoryId}/subcategories/${subcategoryId}`
         : `/api/categories/${categoryId}/subcategories/${subcategoryId}`;
-      
+
       const response = await fetch(endpoint, {
         method: 'DELETE',
       });
@@ -130,6 +134,47 @@ export default function CategoriesPage() {
       }
 
       setSuccess('Subcategory deleted successfully');
+      await loadCategories();
+    } catch (error) {
+      setError(error.message);
+    }
+  };
+
+  const handleAddSubcategoryToExisting = async (categoryId) => {
+    if (!isAdmin) {
+      setError('Only administrators can add subcategories');
+      return;
+    }
+
+    if (!newSubcategoryData.name) {
+      setError('Subcategory name is required');
+      return;
+    }
+
+    try {
+      // Use the appropriate API endpoint based on language
+      const endpoint = language === 'en'
+        ? `/api/english-categories/${categoryId}/subcategories`
+        : `/api/categories/${categoryId}/subcategories`;
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: newSubcategoryData.name,
+          messages: newSubcategoryData.message ? [{ content: newSubcategoryData.message }] : []
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to add subcategory');
+      }
+
+      setSuccess('Subcategory added successfully');
+      setAddingSubcategoryTo(null);
+      setNewSubcategoryData({ name: '', message: '' });
       await loadCategories();
     } catch (error) {
       setError(error.message);
@@ -150,10 +195,10 @@ export default function CategoriesPage() {
       message.content = newContent;
 
       // Use the appropriate API endpoint based on language
-      const endpoint = language === 'en' 
-        ? `/api/english-categories/${categoryId}/subcategories/${subcategoryId}` 
+      const endpoint = language === 'en'
+        ? `/api/english-categories/${categoryId}/subcategories/${subcategoryId}`
         : `/api/categories/${categoryId}/subcategories/${subcategoryId}`;
-      
+
       const response = await fetch(endpoint, {
         method: 'PUT',
         headers: {
@@ -248,10 +293,10 @@ export default function CategoriesPage() {
   const handleApproveCategory = async (categoryId, status) => {
     try {
       // Use the appropriate API endpoint based on language
-      const endpoint = language === 'en' 
-        ? `/api/english-categories/${categoryId}/approve` 
+      const endpoint = language === 'en'
+        ? `/api/english-categories/${categoryId}/approve`
         : `/api/categories/${categoryId}/approve`;
-      
+
       const response = await fetch(endpoint, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -370,20 +415,88 @@ export default function CategoriesPage() {
                       )}
                     </div>
                   </div>
-                  {isAdmin && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteCategory(category._id);
-                      }}
-                      className="text-red-600 hover:text-red-800"
-                    >
-                      <TrashIcon className="h-5 w-5" />
-                    </button>
-                  )}
+                  <div className="flex items-center space-x-3">
+                    {isAdmin && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setAddingSubcategoryTo(category._id);
+                          setNewSubcategoryData({ name: '', message: '' });
+                        }}
+                        className="text-indigo-600 hover:text-indigo-800"
+                        title={t('addSubcategory')}
+                      >
+                        <PlusIcon className="h-5 w-5" />
+                      </button>
+                    )}
+                    {isAdmin && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteCategory(category._id);
+                        }}
+                        className="text-red-600 hover:text-red-800"
+                      >
+                        <TrashIcon className="h-5 w-5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
+              {/* Add Subcategory Form */}
+              {addingSubcategoryTo === category._id && isAdmin && (
+                <div className="border-t border-gray-100 p-6 bg-indigo-50">
+                  <h3 className="text-md font-medium text-gray-900 mb-4">{t('addSubcategoryTo')} "{category.name}"</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label htmlFor="newSubcategoryName" className="block text-sm font-medium text-gray-700 mb-2">
+                        {t('subcategoryName')}
+                      </label>
+                      <input
+                        type="text"
+                        id="newSubcategoryName"
+                        value={newSubcategoryData.name}
+                        onChange={(e) => setNewSubcategoryData({ ...newSubcategoryData, name: e.target.value })}
+                        className="block w-full rounded-lg border-gray-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-4 py-3"
+                        placeholder={t('enterSubcategoryName')}
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="newSubcategoryMessage" className="block text-sm font-medium text-gray-700 mb-2">
+                        {t('message')}
+                      </label>
+                      <textarea
+                        id="newSubcategoryMessage"
+                        value={newSubcategoryData.message}
+                        onChange={(e) => setNewSubcategoryData({ ...newSubcategoryData, message: e.target.value })}
+                        className="block w-full rounded-lg border-gray-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base px-4 py-3"
+                        placeholder={t('enterMessageContent')}
+                        rows="3"
+                      />
+                    </div>
+                    <div className="flex space-x-3">
+                      <button
+                        type="button"
+                        onClick={() => handleAddSubcategoryToExisting(category._id)}
+                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200"
+                      >
+                        <PlusIcon className="h-4 w-4 mr-2" />
+                        {t('addSubcategory')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAddingSubcategoryTo(null)}
+                        className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200"
+                      >
+                        <XMarkIcon className="h-4 w-4 mr-2" />
+                        {t('cancel')}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               {/* Subcategories */}
               {expandedCategories.has(category._id) && (
                 <div className="border-t border-gray-100">

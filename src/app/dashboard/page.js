@@ -13,6 +13,9 @@ export default function Dashboard() {
   const [user, setUser] = useState(null);
   const [categories, setCategories] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [allSubCategories, setAllSubCategories] = useState([]);
+  const dropdownRef = useRef(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedSubCategory, setSelectedSubCategory] = useState(null);
@@ -20,12 +23,6 @@ export default function Dashboard() {
   const [messages, setMessages] = useState([]);
   const [copiedMessageId, setCopiedMessageId] = useState(null);
   const [error, setError] = useState('');
-  const [importSuccess, setImportSuccess] = useState('');
-  const [isImporting, setIsImporting] = useState(false);
-  const [isClearing, setIsClearing] = useState(false);
-  const [selectedFile, setSelectedFile] = useState(null);
-  const fileInputRef = useRef(null);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -48,12 +45,42 @@ export default function Dashboard() {
     loadCategories();
   }, [language]);
 
+  // Collect all subcategories from all categories
+  useEffect(() => {
+    if (categories.length > 0) {
+      const allSubs = [];
+      categories.forEach(category => {
+        category.subcategories.forEach(sub => {
+          allSubs.push({
+            name: sub.name,
+            categoryName: category.name,
+            categoryId: category._id
+          });
+        });
+      });
+      setAllSubCategories(allSubs);
+    }
+  }, [categories]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   const loadCategories = async () => {
     try {
       const url = language === 'en' ? '/api/english-categories' : '/api/categories';
       const response = await fetch(url);
       const data = await response.json();
-      console.log(data);
 
       if (data.categories) {
         const filteredCategories = data.categories.filter(cat => cat.status === 'Approved');
@@ -97,92 +124,6 @@ export default function Dashboard() {
     }
   };
 
-  const handleClearEnglishCategories = async () => {
-    if (!confirm('Are you sure you want to clear all English categories? This action cannot be undone.')) {
-      return;
-    }
-
-    setIsClearing(true);
-    setError('');
-    setImportSuccess('');
-
-    try {
-      const response = await fetch('/api/english-categories/clear', {
-        method: 'DELETE',
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to clear English categories');
-      }
-
-      setImportSuccess(result.message || 'English categories database cleared successfully!');
-      if (language === 'en') {
-        loadCategories();
-      }
-    } catch (error) {
-      console.error('Error clearing English categories:', error);
-      setError(error.message || 'Failed to clear English categories');
-    } finally {
-      setIsClearing(false);
-    }
-  };
-
-  const handleFileChange = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      setSelectedFile(file);
-    }
-  };
-
-  const handleImportEnglishData = async () => {
-    if (!selectedFile) {
-      setError('Please select an Excel file first');
-      return;
-    }
-
-    if (!confirm('Are you sure you want to import data from the selected Excel file to the English categories collection?')) {
-      return;
-    }
-
-    setIsImporting(true);
-    setError('');
-    setImportSuccess('');
-
-    try {
-      const formData = new FormData();
-      formData.append('file', selectedFile);
-
-      const response = await fetch('/api/english-categories/import', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to import data');
-      }
-
-      setImportSuccess('Data successfully imported to English categories!');
-      setSelectedFile(null);
-
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-
-      if (language === 'en') {
-        loadCategories();
-      }
-    } catch (error) {
-      console.error('Error importing data:', error);
-      setError(error.message || 'Failed to import data');
-    } finally {
-      setIsImporting(false);
-    }
-  };
-
   const handleCopyMessage = async (message, index) => {
     try {
       await navigator.clipboard.writeText(message);
@@ -193,9 +134,46 @@ export default function Dashboard() {
     }
   };
 
+  // Filter all subcategories based on search term
+  const filteredAllSubCategories = searchTerm
+    ? allSubCategories.filter(subCategory =>
+        String(subCategory.name).toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : [];
+
+  // Filter subcategories for the selected category
   const filteredSubCategories = subCategories.filter(subCategory =>
     String(subCategory).toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Function to highlight the matching text in search results
+  const highlightMatch = (text, query) => {
+    if (!query) return text;
+    const regex = new RegExp(`(${query})`, 'gi');
+    const parts = text.split(regex);
+
+    return parts.map((part, index) =>
+      regex.test(part) ? <span key={index} className="bg-yellow-200">{part}</span> : part
+    );
+  };
+
+  // Handle subcategory selection from dropdown
+  const handleSubCategorySelect = (subCategory) => {
+    const category = categories.find(cat => cat.name === subCategory.categoryName);
+    if (category) {
+      setSelectedCategory(category.name);
+      setSubCategories(category.subcategories.map(sub => sub.name));
+      setSelectedSubCategory(subCategory.name);
+
+      // Find and set messages for the selected subcategory
+      const subCategoryData = category.subcategories.find(sub => sub.name === subCategory.name);
+      if (subCategoryData) {
+        setMessages(subCategoryData.messages.map(msg => msg.content));
+      }
+    }
+    setSearchTerm('');
+    setShowDropdown(false);
+  };
 
   if (!user) {
     return (
@@ -269,21 +247,10 @@ export default function Dashboard() {
             </div>
           )}
 
-          {importSuccess && (
-            <div className="mb-6 bg-green-50 border-l-4 border-green-500 p-4 rounded-lg shadow-sm">
-              <div className="flex items-center">
-                <svg className="h-5 w-5 text-green-500 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                <p className="text-sm text-green-700">{importSuccess}</p>
-              </div>
-            </div>
-          )}
-
           <div className="h-full bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="h-full p-6 overflow-y-auto">
               <div className="mb-6">
-                <div className="relative max-w-md">
+                <div className="relative max-w-md" ref={dropdownRef}>
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
                   </div>
@@ -292,8 +259,38 @@ export default function Dashboard() {
                     className="block w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg leading-5 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition-all duration-200"
                     placeholder={t('searchSubcategories')}
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value);
+                      setShowDropdown(e.target.value.length > 0);
+                    }}
+                    onFocus={() => {
+                      if (searchTerm.length > 0) {
+                        setShowDropdown(true);
+                      }
+                    }}
                   />
+
+                  {/* Dropdown for search results */}
+                  {showDropdown && filteredAllSubCategories.length > 0 && (
+                    <div className="absolute z-10 mt-1 w-full bg-white rounded-md shadow-lg max-h-60 overflow-auto border border-gray-200">
+                      <ul className="py-1">
+                        {filteredAllSubCategories.map((subCategory, index) => (
+                          <li
+                            key={index}
+                            className="px-4 py-2 hover:bg-indigo-50 cursor-pointer flex flex-col"
+                            onClick={() => handleSubCategorySelect(subCategory)}
+                          >
+                            <div className="font-medium text-sm text-gray-800">
+                              {highlightMatch(subCategory.name, searchTerm)}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {t('inCategory')}: {subCategory.categoryName}
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -343,7 +340,7 @@ export default function Dashboard() {
                         </svg>
                         {t('subcategories')}
                       </h2>
-                      {filteredSubCategories.length === 0 ? (
+                      {subCategories.length === 0 ? (
                         <div className="text-center py-8">
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 mx-auto text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -352,7 +349,7 @@ export default function Dashboard() {
                         </div>
                       ) : (
                         <div className="space-y-2">
-                          {filteredSubCategories.map((subCategory, index) => (
+                          {subCategories.map((subCategory, index) => (
                             <div
                               key={index}
                               className="bg-white rounded-lg p-3 shadow-sm hover:shadow-md transition-all duration-200 border border-gray-100"
