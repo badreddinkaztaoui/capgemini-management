@@ -39,7 +39,8 @@ const translations = {
     creating: 'Creating...',
     cancel: 'Cancel',
     save: 'Save',
-    createNewCategory: 'Create New Category'
+    createNewCategory: 'Create New Category',
+    addSubcategoryTo: 'Add Subcategory To'
   },
   fr: {
     welcome: 'Bienvenue,',
@@ -76,32 +77,30 @@ const translations = {
     creating: 'Création en cours...',
     cancel: 'Annuler',
     save: 'Enregistrer',
-    createNewCategory: 'Créer une nouvelle catégorie'
+    createNewCategory: 'Créer une nouvelle catégorie',
+    addSubcategoryTo: 'Ajouter une sous-catégorie à'
   }
 };
 
 const LanguageContext = createContext();
 
 export function LanguageProvider({ children }) {
-  // Get saved language from localStorage or default to English
   const [language, setLanguage] = useState('en');
-  
+
   useEffect(() => {
-    // Load language preference from localStorage on client side
     const savedLanguage = localStorage.getItem('language') || 'en';
     setLanguage(savedLanguage);
   }, []);
-  
+
   const changeLanguage = (lang) => {
     setLanguage(lang);
     localStorage.setItem('language', lang);
   };
-  
-  // Get translation for a specific key
+
   const t = (key) => {
     return translations[language][key] || key;
   };
-  
+
   return (
     <LanguageContext.Provider value={{ language, changeLanguage, t }}>
       {children}
@@ -109,7 +108,6 @@ export function LanguageProvider({ children }) {
   );
 }
 
-// Custom hook to use the language context
 export function useLanguage() {
   const context = useContext(LanguageContext);
   if (context === undefined) {

@@ -94,7 +94,6 @@ export default function CategoriesPage() {
     if (!confirm('Are you sure you want to delete this category?')) return;
 
     try {
-      // Use the appropriate API endpoint based on language
       const endpoint = language === 'en' ? `/api/english-categories/${categoryId}` : `/api/categories/${categoryId}`;
       const response = await fetch(endpoint, {
         method: 'DELETE',
@@ -120,7 +119,6 @@ export default function CategoriesPage() {
     if (!confirm('Are you sure you want to delete this subcategory?')) return;
 
     try {
-      // Use the appropriate API endpoint based on language
       const endpoint = language === 'en'
         ? `/api/english-categories/${categoryId}/subcategories/${subcategoryId}`
         : `/api/categories/${categoryId}/subcategories/${subcategoryId}`;
@@ -152,7 +150,6 @@ export default function CategoriesPage() {
     }
 
     try {
-      // Use the appropriate API endpoint based on language
       const endpoint = language === 'en'
         ? `/api/english-categories/${categoryId}/subcategories`
         : `/api/categories/${categoryId}/subcategories`;
@@ -194,7 +191,6 @@ export default function CategoriesPage() {
 
       message.content = newContent;
 
-      // Use the appropriate API endpoint based on language
       const endpoint = language === 'en'
         ? `/api/english-categories/${categoryId}/subcategories/${subcategoryId}`
         : `/api/categories/${categoryId}/subcategories/${subcategoryId}`;
@@ -256,7 +252,6 @@ export default function CategoriesPage() {
     }
 
     try {
-      // Use the appropriate API endpoint based on language
       const endpoint = language === 'en' ? '/api/english-categories' : '/api/categories';
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -292,7 +287,6 @@ export default function CategoriesPage() {
 
   const handleApproveCategory = async (categoryId, status) => {
     try {
-      // Use the appropriate API endpoint based on language
       const endpoint = language === 'en'
         ? `/api/english-categories/${categoryId}/approve`
         : `/api/categories/${categoryId}/approve`;
@@ -447,7 +441,9 @@ export default function CategoriesPage() {
               {/* Add Subcategory Form */}
               {addingSubcategoryTo === category._id && isAdmin && (
                 <div className="border-t border-gray-100 p-6 bg-indigo-50">
-                  <h3 className="text-md font-medium text-gray-900 mb-4">{t('addSubcategoryTo')} "{category.name}"</h3>
+                  <h3 className="text-md font-medium text-gray-900 mb-4">
+                    {t('addSubcategoryTo')} <span className="font-bold text-indigo-600">{category.name}</span>
+                  </h3>
                   <div className="space-y-4">
                     <div>
                       <label htmlFor="newSubcategoryName" className="block text-sm font-medium text-gray-700 mb-2">
@@ -496,7 +492,7 @@ export default function CategoriesPage() {
                   </div>
                 </div>
               )}
-              
+
               {/* Subcategories */}
               {expandedCategories.has(category._id) && (
                 <div className="border-t border-gray-100">
