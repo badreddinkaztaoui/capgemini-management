@@ -5,7 +5,8 @@ import Category from '@/models/Category';
 export async function DELETE(request, { params }) {
   try {
     await dbConnect();
-    const { id, subcategoryId } = params;
+    const paramsObj = await params;
+    const { id, subcategoryId } = paramsObj;
 
     const category = await Category.findById(id);
     if (!category) {
@@ -38,7 +39,8 @@ export async function DELETE(request, { params }) {
 export async function PUT(request, { params }) {
   try {
     await dbConnect();
-    const { id, subcategoryId } = params;
+    const paramsObj = await params;
+    const { id, subcategoryId } = paramsObj;
     const body = await request.json();
 
     const category = await Category.findById(id);

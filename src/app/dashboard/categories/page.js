@@ -22,6 +22,7 @@ export default function CategoriesPage() {
   const [editingMessage, setEditingMessage] = useState(null);
   const [expandedCategories, setExpandedCategories] = useState(new Set());
   const [addingSubcategoryTo, setAddingSubcategoryTo] = useState(null);
+  const [editingCategoryMessages, setEditingCategoryMessages] = useState(null);
   const [newSubcategoryData, setNewSubcategoryData] = useState({
     name: '',
     message: ''
@@ -60,13 +61,11 @@ export default function CategoriesPage() {
       }
     } catch (error) {
       setError('Failed to load categories');
-      console.error('Error loading categories:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Reload categories when language changes
   useEffect(() => {
     if (user) {
       loadCategories();
@@ -94,13 +93,25 @@ export default function CategoriesPage() {
     if (!confirm('Are you sure you want to delete this category?')) return;
 
     try {
-      const endpoint = language === 'en' ? `/api/english-categories/${categoryId}` : `/api/categories/${categoryId}`;
-      const response = await fetch(endpoint, {
+      const regularEndpoint = `/api/categories/${categoryId}`;
+      const englishEndpoint = `/api/english-categories/${categoryId}`;
+
+      let response = await fetch(regularEndpoint, {
         method: 'DELETE',
       });
 
+      let responseData = await response.json().catch(e => ({ error: 'Failed to parse response' }));
+
+      if (response.status === 404) {
+        response = await fetch(englishEndpoint, {
+          method: 'DELETE',
+        });
+
+        responseData = await response.json().catch(e => ({ error: 'Failed to parse response' }));
+      }
+
       if (!response.ok) {
-        throw new Error('Failed to delete category');
+        throw new Error(`Failed to delete category: ${responseData.error || response.statusText}`);
       }
 
       setSuccess('Category deleted successfully');
@@ -301,10 +312,62 @@ export default function CategoriesPage() {
         throw new Error('Failed to update category status');
       }
 
+      setSuccess(status === 'Approved' ? 'Category approved successfully' : 'Category disapproved successfully');
       await loadCategories();
     } catch (error) {
-      console.error('Error updating category status:', error);
+      setError(error.message);
     }
+  };
+
+  const handleEditAndApproveCategory = (category) => {
+    // Make a deep copy of the category to edit
+    setEditingCategoryMessages({
+      categoryId: category._id,
+      name: category.name,
+      subcategories: JSON.parse(JSON.stringify(category.subcategories))
+    });
+  };
+
+  const handleSaveAndApproveCategory = async () => {
+    if (!editingCategoryMessages) return;
+    
+    try {
+      // First update all subcategories with their messages
+      const { categoryId, subcategories } = editingCategoryMessages;
+      
+      // For each subcategory, update its messages
+      for (const subcategory of subcategories) {
+        const endpoint = language === 'en'
+          ? `/api/english-categories/${categoryId}/subcategories/${subcategory._id}`
+          : `/api/categories/${categoryId}/subcategories/${subcategory._id}`;
+          
+        const response = await fetch(endpoint, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            messages: subcategory.messages
+          }),
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to update messages for subcategory ${subcategory.name}`);
+        }
+      }
+      
+      // Then approve the category
+      await handleApproveCategory(categoryId, 'Approved');
+      
+      // Reset the editing state
+      setEditingCategoryMessages(null);
+    } catch (error) {
+      setError(error.message);
+    }
+  };
+
+  const handleCancelEditingMessages = () => {
+    setEditingCategoryMessages(null);
   };
 
   if (isLoading) {
@@ -386,15 +449,26 @@ export default function CategoriesPage() {
                         {category.status === 'Approved' ? t('approved') : t('disapproved')}
                       </span>
                       {isAdmin && category.status === 'Disapproved' && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleApproveCategory(category._id, 'Approved');
-                          }}
-                          className="px-3 py-1 text-sm text-white bg-green-600 hover:bg-green-700 rounded-md transition-colors duration-200"
-                        >
-                          {t('approve')}
-                        </button>
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditAndApproveCategory(category);
+                            }}
+                            className="px-3 py-1 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors duration-200"
+                          >
+                            {t('editAndApprove')}
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleApproveCategory(category._id, 'Approved');
+                            }}
+                            className="px-3 py-1 text-sm text-white bg-green-600 hover:bg-green-700 rounded-md transition-colors duration-200"
+                          >
+                            {t('approve')}
+                          </button>
+                        </div>
                       )}
                       {isAdmin && category.status === 'Approved' && (
                         <button
@@ -724,6 +798,72 @@ export default function CategoriesPage() {
           </div>
         )}
       </div>
+
+      {/* Edit Messages Modal */}
+      {editingCategoryMessages && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold">
+                  {t('editMessagesFor')} {editingCategoryMessages.name}
+                </h2>
+                <button
+                  onClick={handleCancelEditingMessages}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <XMarkIcon className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                {editingCategoryMessages.subcategories.map((subcategory) => (
+                  <div key={subcategory._id} className="border rounded-lg p-4">
+                    <h3 className="font-semibold text-lg mb-2">{subcategory.name}</h3>
+                    
+                    {subcategory.messages.map((message, messageIndex) => (
+                      <div key={message._id || messageIndex} className="mb-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          {t('message')} {messageIndex + 1}
+                        </label>
+                        <textarea
+                          value={message.content}
+                          onChange={(e) => {
+                            const updatedSubcategories = [...editingCategoryMessages.subcategories];
+                            const subIndex = updatedSubcategories.findIndex(s => s._id === subcategory._id);
+                            updatedSubcategories[subIndex].messages[messageIndex].content = e.target.value;
+                            setEditingCategoryMessages({
+                              ...editingCategoryMessages,
+                              subcategories: updatedSubcategories
+                            });
+                          }}
+                          className="w-full p-2 border rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                          rows="3"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-6 flex justify-end space-x-3">
+                <button
+                  onClick={handleCancelEditingMessages}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                >
+                  {t('cancel')}
+                </button>
+                <button
+                  onClick={handleSaveAndApproveCategory}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+                >
+                  {t('saveAndApprove')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

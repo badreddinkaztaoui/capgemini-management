@@ -5,7 +5,8 @@ import EnglishCategory from '@/models/EnglishCategory';
 export async function PUT(request, { params }) {
   try {
     await dbConnect();
-    const { id, subcategoryId } = params;
+    const paramsObj = await params;
+    const { id, subcategoryId } = paramsObj;
     const body = await request.json();
 
     const category = await EnglishCategory.findById(id);
@@ -50,7 +51,8 @@ export async function PUT(request, { params }) {
 export async function DELETE(request, { params }) {
   try {
     await dbConnect();
-    const { id, subcategoryId } = params;
+    const paramsObj = await params;
+    const { id, subcategoryId } = paramsObj;
 
     const category = await EnglishCategory.findById(id);
     if (!category) {
