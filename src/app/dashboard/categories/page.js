@@ -19,10 +19,11 @@ export default function CategoriesPage() {
     message: ''
   });
   const [subcategories, setSubcategories] = useState([]);
+  const [isEditing, setIsEditing] = useState(false);
   const [editingMessage, setEditingMessage] = useState(null);
+  const [editingMessageContent, setEditingMessageContent] = useState('');
   const [expandedCategories, setExpandedCategories] = useState(new Set());
   const [addingSubcategoryTo, setAddingSubcategoryTo] = useState(null);
-  const [editingCategoryMessages, setEditingCategoryMessages] = useState(null);
   const [newSubcategoryData, setNewSubcategoryData] = useState({
     name: '',
     message: ''
@@ -189,7 +190,11 @@ export default function CategoriesPage() {
     }
   };
 
-  const handleEditMessage = async (categoryId, subcategoryId, messageId, newContent) => {
+  const onEditMessageChange = (e) => {
+    setEditingMessageContent(e.target.value);
+  };
+
+  const handleEditMessage = async (categoryId, subcategoryId, messageId) => {
     if (!isAdmin) {
       setError('Only administrators can edit messages');
       return;
@@ -200,7 +205,13 @@ export default function CategoriesPage() {
       const subcategory = category.subcategories.find(sub => sub._id === subcategoryId);
       const message = subcategory.messages.find(msg => msg._id === messageId);
 
-      message.content = newContent;
+      // Use the edited content from state
+      const updatedMessages = subcategory.messages.map(msg => {
+        if (msg._id === messageId) {
+          return { ...msg, content: editingMessageContent };
+        }
+        return msg;
+      });
 
       const endpoint = language === 'en'
         ? `/api/english-categories/${categoryId}/subcategories/${subcategoryId}`
@@ -212,7 +223,7 @@ export default function CategoriesPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          messages: subcategory.messages
+          messages: updatedMessages
         }),
       });
 
@@ -222,6 +233,7 @@ export default function CategoriesPage() {
 
       setSuccess('Message updated successfully');
       setEditingMessage(null);
+      setEditingMessageContent('');
       await loadCategories();
     } catch (error) {
       setError(error.message);
@@ -319,57 +331,6 @@ export default function CategoriesPage() {
     }
   };
 
-  const handleEditAndApproveCategory = (category) => {
-    // Make a deep copy of the category to edit
-    setEditingCategoryMessages({
-      categoryId: category._id,
-      name: category.name,
-      subcategories: JSON.parse(JSON.stringify(category.subcategories))
-    });
-  };
-
-  const handleSaveAndApproveCategory = async () => {
-    if (!editingCategoryMessages) return;
-    
-    try {
-      // First update all subcategories with their messages
-      const { categoryId, subcategories } = editingCategoryMessages;
-      
-      // For each subcategory, update its messages
-      for (const subcategory of subcategories) {
-        const endpoint = language === 'en'
-          ? `/api/english-categories/${categoryId}/subcategories/${subcategory._id}`
-          : `/api/categories/${categoryId}/subcategories/${subcategory._id}`;
-          
-        const response = await fetch(endpoint, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            messages: subcategory.messages
-          }),
-        });
-        
-        if (!response.ok) {
-          throw new Error(`Failed to update messages for subcategory ${subcategory.name}`);
-        }
-      }
-      
-      // Then approve the category
-      await handleApproveCategory(categoryId, 'Approved');
-      
-      // Reset the editing state
-      setEditingCategoryMessages(null);
-    } catch (error) {
-      setError(error.message);
-    }
-  };
-
-  const handleCancelEditingMessages = () => {
-    setEditingCategoryMessages(null);
-  };
-
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 p-6">
@@ -450,15 +411,6 @@ export default function CategoriesPage() {
                       </span>
                       {isAdmin && category.status === 'Disapproved' && (
                         <div className="flex space-x-2">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEditAndApproveCategory(category);
-                            }}
-                            className="px-3 py-1 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors duration-200"
-                          >
-                            {t('editAndApprove')}
-                          </button>
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -591,8 +543,8 @@ export default function CategoriesPage() {
                             {editingMessage === message._id ? (
                               <div className="space-y-2">
                                 <textarea
-                                  value={message.content}
-                                  onChange={(e) => handleEditMessage(category._id, subcategory._id, message._id, e.target.value)}
+                                  value={editingMessageContent}
+                                  onChange={onEditMessageChange}
                                   className="w-full p-3 rounded-lg border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm resize-none transition-all duration-200"
                                   rows="3"
                                   placeholder="Enter message content..."
@@ -605,7 +557,7 @@ export default function CategoriesPage() {
                                     {t('cancel')}
                                   </button>
                                   <button
-                                    onClick={() => handleEditMessage(category._id, subcategory._id, message._id, message.content)}
+                                    onClick={() => handleEditMessage(category._id, subcategory._id, message._id)}
                                     className="px-3 py-1.5 text-sm text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors duration-200"
                                   >
                                     {t('save')}
@@ -617,7 +569,10 @@ export default function CategoriesPage() {
                                 <p className="text-gray-700 whitespace-pre-wrap">{message.content}</p>
                                 {isAdmin && (
                                   <button
-                                    onClick={() => setEditingMessage(message._id)}
+                                    onClick={() => {
+                                      setEditingMessage(message._id);
+                                      setEditingMessageContent(message.content);
+                                    }}
                                     className="ml-2 text-gray-400 hover:text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                                   >
                                     <PencilIcon className="h-4 w-4" />
@@ -798,72 +753,6 @@ export default function CategoriesPage() {
           </div>
         )}
       </div>
-
-      {/* Edit Messages Modal */}
-      {editingCategoryMessages && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">
-                  {t('editMessagesFor')} {editingCategoryMessages.name}
-                </h2>
-                <button
-                  onClick={handleCancelEditingMessages}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  <XMarkIcon className="h-6 w-6" />
-                </button>
-              </div>
-
-              <div className="space-y-6">
-                {editingCategoryMessages.subcategories.map((subcategory) => (
-                  <div key={subcategory._id} className="border rounded-lg p-4">
-                    <h3 className="font-semibold text-lg mb-2">{subcategory.name}</h3>
-                    
-                    {subcategory.messages.map((message, messageIndex) => (
-                      <div key={message._id || messageIndex} className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          {t('message')} {messageIndex + 1}
-                        </label>
-                        <textarea
-                          value={message.content}
-                          onChange={(e) => {
-                            const updatedSubcategories = [...editingCategoryMessages.subcategories];
-                            const subIndex = updatedSubcategories.findIndex(s => s._id === subcategory._id);
-                            updatedSubcategories[subIndex].messages[messageIndex].content = e.target.value;
-                            setEditingCategoryMessages({
-                              ...editingCategoryMessages,
-                              subcategories: updatedSubcategories
-                            });
-                          }}
-                          className="w-full p-2 border rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-                          rows="3"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-6 flex justify-end space-x-3">
-                <button
-                  onClick={handleCancelEditingMessages}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                >
-                  {t('cancel')}
-                </button>
-                <button
-                  onClick={handleSaveAndApproveCategory}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
-                >
-                  {t('saveAndApprove')}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
