@@ -151,11 +151,6 @@ export default function CategoriesPage() {
   };
 
   const handleAddSubcategoryToExisting = async (categoryId) => {
-    if (!isAdmin) {
-      setError('Only administrators can add subcategories');
-      return;
-    }
-
     if (!newSubcategoryData.name) {
       setError('Subcategory name is required');
       return;
@@ -205,7 +200,6 @@ export default function CategoriesPage() {
       const subcategory = category.subcategories.find(sub => sub._id === subcategoryId);
       const message = subcategory.messages.find(msg => msg._id === messageId);
 
-      // Use the edited content from state
       const updatedMessages = subcategory.messages.map(msg => {
         if (msg._id === messageId) {
           return { ...msg, content: editingMessageContent };
@@ -436,19 +430,17 @@ export default function CategoriesPage() {
                     </div>
                   </div>
                   <div className="flex items-center space-x-3">
-                    {isAdmin && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setAddingSubcategoryTo(category._id);
-                          setNewSubcategoryData({ name: '', message: '' });
-                        }}
-                        className="text-indigo-600 hover:text-indigo-800"
-                        title={t('addSubcategory')}
-                      >
-                        <PlusIcon className="h-5 w-5" />
-                      </button>
-                    )}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setAddingSubcategoryTo(category._id);
+                        setNewSubcategoryData({ name: '', message: '' });
+                      }}
+                      className="text-indigo-600 hover:text-indigo-800"
+                      title={t('addSubcategory')}
+                    >
+                      <PlusIcon className="h-5 w-5" />
+                    </button>
                     {isAdmin && (
                       <button
                         onClick={(e) => {
@@ -465,7 +457,7 @@ export default function CategoriesPage() {
               </div>
 
               {/* Add Subcategory Form */}
-              {addingSubcategoryTo === category._id && isAdmin && (
+              {addingSubcategoryTo === category._id && (
                 <div className="border-t border-gray-100 p-6 bg-indigo-50">
                   <h3 className="text-md font-medium text-gray-900 mb-4">
                     {t('addSubcategoryTo')} <span className="font-bold text-indigo-600">{category.name}</span>
