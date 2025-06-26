@@ -19,7 +19,6 @@ export default function CategoriesPage() {
     message: ''
   });
   const [subcategories, setSubcategories] = useState([]);
-  const [isEditing, setIsEditing] = useState(false);
   const [editingMessage, setEditingMessage] = useState(null);
   const [editingMessageContent, setEditingMessageContent] = useState('');
   const [expandedCategories, setExpandedCategories] = useState(new Set());
@@ -28,6 +27,10 @@ export default function CategoriesPage() {
     name: '',
     message: ''
   });
+  const { language } = useLanguage();
+
+  const isAdmin = user?.role === 'admin';
+  const isMember = user?.role === 'member';
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -47,10 +50,6 @@ export default function CategoriesPage() {
     loadCategories();
   }, [router]);
 
-  const isAdmin = user?.role === 'admin';
-  const isMember = user?.role === 'member';
-
-  const { language } = useLanguage();
 
   const loadCategories = async () => {
     try {
@@ -345,7 +344,6 @@ export default function CategoriesPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        {/* Header */}
         <div className="mb-8">
           <button
             onClick={() => router.push('/dashboard')}
@@ -365,7 +363,6 @@ export default function CategoriesPage() {
           )}
         </div>
 
-        {/* Error and Success Messages */}
         {error && (
           <div className="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg">
             <p className="text-sm text-red-700">{error}</p>
@@ -378,11 +375,9 @@ export default function CategoriesPage() {
           </div>
         )}
 
-        {/* Categories List */}
         <div className="space-y-4">
-          {categories.map((category) => (
+          {categories.filter((category) => !isAdmin ? category.status === 'Approved' : true).map((category) => (
             <div key={category._id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-              {/* Category Header */}
               <div
                 className="p-6 cursor-pointer hover:bg-gray-50 transition-colors duration-200"
                 onClick={() => toggleCategory(category._id)}
@@ -396,13 +391,6 @@ export default function CategoriesPage() {
                     )}
                     <h3 className="text-lg font-semibold text-gray-900">{category.name}</h3>
                     <div className="flex items-center space-x-2">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        category.status === 'Approved'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {category.status === 'Approved' ? t('approved') : t('disapproved')}
-                      </span>
                       {isAdmin && category.status === 'Disapproved' && (
                         <div className="flex space-x-2">
                           <button
@@ -456,7 +444,6 @@ export default function CategoriesPage() {
                 </div>
               </div>
 
-              {/* Add Subcategory Form */}
               {addingSubcategoryTo === category._id && (
                 <div className="border-t border-gray-100 p-6 bg-indigo-50">
                   <h3 className="text-md font-medium text-gray-900 mb-4">
@@ -511,7 +498,6 @@ export default function CategoriesPage() {
                 </div>
               )}
 
-              {/* Subcategories */}
               {expandedCategories.has(category._id) && (
                 <div className="border-t border-gray-100">
                   {category.subcategories.map((subcategory) => (
@@ -528,7 +514,6 @@ export default function CategoriesPage() {
                         )}
                       </div>
 
-                      {/* Messages */}
                       <div className="space-y-3">
                         {subcategory.messages.map((message) => (
                           <div key={message._id} className="bg-white p-4 rounded-lg border border-gray-200">
@@ -583,7 +568,6 @@ export default function CategoriesPage() {
           ))}
         </div>
 
-        {/* Create Category Form */}
         {(isAdmin || isMember) && (
           <div className="mt-8 bg-gradient-to-br from-white to-indigo-50 rounded-2xl shadow-lg border border-indigo-100 overflow-hidden">
             <div className="p-8">
@@ -595,7 +579,6 @@ export default function CategoriesPage() {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-8">
-                {/* Category Name */}
                 <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
                   <label htmlFor="categoryName" className="block text-sm font-medium text-gray-700 mb-2">
                     {t('categoryName')}
@@ -618,7 +601,6 @@ export default function CategoriesPage() {
                   </div>
                 </div>
 
-                {/* Subcategories List */}
                 {subcategories.length > 0 && (
                   <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
                     <h3 className="text-sm font-medium text-gray-700 mb-4">{t('addedSubcategories')}</h3>
@@ -653,7 +635,6 @@ export default function CategoriesPage() {
                   </div>
                 )}
 
-                {/* Add Subcategory Form */}
                 <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
                   <div className="flex items-center space-x-3 mb-6">
                     <div className="p-2 bg-indigo-100 rounded-lg">
