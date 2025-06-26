@@ -404,7 +404,7 @@ export default function CategoriesPage() {
                           </button>
                         </div>
                       )}
-                      {isAdmin && category.status === 'Approved' && (
+                      {isAdmin && category.status !== 'Approved' && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
