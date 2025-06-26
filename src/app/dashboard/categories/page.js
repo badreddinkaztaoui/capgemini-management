@@ -317,7 +317,7 @@ export default function CategoriesPage() {
         throw new Error('Failed to update category status');
       }
 
-      setSuccess(status === 'Approved' ? 'Category approved successfully' : 'Category disapproved successfully');
+      setSuccess('Category approved successfully');
       await loadCategories();
     } catch (error) {
       setError(error.message);
@@ -408,7 +408,7 @@ export default function CategoriesPage() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleApproveCategory(category._id, 'Disapproved');
+                            handleDeleteCategory(category._id);
                           }}
                           className="px-3 py-1 text-sm text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors duration-200"
                         >
